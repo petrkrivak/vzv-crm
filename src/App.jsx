@@ -112,10 +112,18 @@ const gcalLink = (task, company, contact) => {
   return `${base}&text=${title}&dates=${dates}&details=${details}`;
 };
 
+// Společný styl pro všechna vstupní pole — fontSize 16px zabrání zoomování na iOS
+const inputStyle = {
+  width:"100%", background:C.white, border:`1px solid ${C.border}`,
+  borderRadius:8, padding:"11px 14px", color:C.text, fontSize:16,
+  outline:"none", boxSizing:"border-box", transition:"border-color 0.15s",
+  WebkitAppearance:"none", appearance:"none",
+};
+
 const s = {
   badge: (color) => ({ display:"inline-block", padding:"3px 10px", borderRadius:20, fontSize:11, fontWeight:600, background:`${color}18`, color, border:`1px solid ${color}33`, letterSpacing:"0.3px", whiteSpace:"nowrap" }),
   card: { background:C.white, border:`1px solid ${C.border}`, borderRadius:12, padding:"18px 22px", marginBottom:12, boxShadow:"0 1px 4px rgba(0,0,0,0.06)" },
-  input: { width:"100%", background:C.white, border:`1px solid ${C.border}`, borderRadius:8, padding:"9px 13px", color:C.text, fontSize:14, outline:"none", boxSizing:"border-box", transition:"border-color 0.15s" },
+  input: inputStyle,
   btn: (v="primary") => ({
     display:"inline-flex", alignItems:"center", gap:6, padding:"8px 16px", borderRadius:8, border:"none", cursor:"pointer", fontSize:13, fontWeight:600, transition:"all 0.15s",
     ...(v==="primary"?{background:C.accent,color:C.white,boxShadow:`0 2px 8px ${C.accentGlow}`}:
@@ -125,17 +133,20 @@ const s = {
        v==="gcal-big"?{background:C.info,color:C.white,boxShadow:`0 2px 8px rgba(37,99,235,0.3)`,fontSize:14,padding:"12px 20px"}:
        {background:C.bg,color:C.text,border:`1px solid ${C.border}`}),
   }),
-  label: { display:"block", fontSize:11, fontWeight:700, color:C.textMuted, marginBottom:5, letterSpacing:"0.6px", textTransform:"uppercase" },
+  label: { display:"block", fontSize:12, fontWeight:700, color:C.textMuted, marginBottom:6, letterSpacing:"0.5px", textTransform:"uppercase" },
 };
 
 const StatusBadge = ({status}) => <span style={s.badge(STATUS_COLORS[status]||C.textMuted)}>{status}</span>;
-const Field = ({label,children}) => <div style={{marginBottom:14}}><label style={s.label}>{label}</label>{children}</div>;
-const Input = (props) => <input style={s.input} {...props}/>;
-const Textarea = (props) => <textarea style={{...s.input,minHeight:76,resize:"vertical"}} {...props}/>;
-const Select = ({options,...props}) => (
-  <select style={{...s.input,appearance:"none"}} {...props}>
-    <option value="">— vyberte —</option>
-    {options.map(o=><option key={o} value={o}>{o}</option>)}
+const Field = ({label,children}) => <div style={{marginBottom:16}}><label style={s.label}>{label}</label>{children}</div>;
+const Input = (props) => <input style={inputStyle} {...props}/>;
+const Textarea = (props) => <textarea style={{...inputStyle,minHeight:80,resize:"vertical"}} {...props}/>;
+const MobileSelect = ({options, withEmpty, emptyLabel, ...props}) => (
+  <select style={inputStyle} {...props}>
+    {withEmpty && <option value="">{emptyLabel||"— vyberte —"}</option>}
+    {options.map(o => typeof o === "string"
+      ? <option key={o} value={o}>{o}</option>
+      : <option key={o.id} value={o.id}>{o.name}</option>
+    )}
   </select>
 );
 
@@ -159,7 +170,7 @@ const AutocompleteInput = ({ value, onChange, suggestions, placeholder }) => {
       <div style={{ position:"absolute", left:10, top:"50%", transform:"translateY(-50%)", color:C.textDim, pointerEvents:"none" }}>
         <Icon d={Icons.search} size={14} />
       </div>
-      <input style={{ ...s.input, paddingLeft:34 }} value={value}
+      <input style={{ ...inputStyle, paddingLeft:34 }} value={value}
         onChange={e => handleChange(e.target.value)}
         onFocus={() => { if (value.length === 0) { setFiltered(suggestions); setOpen(suggestions.length > 0); } }}
         placeholder={placeholder}/>
@@ -167,7 +178,7 @@ const AutocompleteInput = ({ value, onChange, suggestions, placeholder }) => {
         <div style={{ position:"absolute", top:"100%", left:0, right:0, zIndex:200, background:C.white, border:`1px solid ${C.border}`, borderRadius:8, boxShadow:"0 4px 16px rgba(0,0,0,0.12)", maxHeight:220, overflow:"auto", marginTop:2 }}>
           {filtered.map((item, i) => (
             <div key={i} onMouseDown={() => { onChange(item); setOpen(false); }}
-              style={{ padding:"9px 14px", cursor:"pointer", fontSize:13, color:C.text, borderBottom: i < filtered.length-1 ? `1px solid ${C.border}` : "none" }}
+              style={{ padding:"12px 14px", cursor:"pointer", fontSize:15, color:C.text, borderBottom: i < filtered.length-1 ? `1px solid ${C.border}` : "none" }}
               onMouseEnter={e => e.currentTarget.style.background = C.accentLight}
               onMouseLeave={e => e.currentTarget.style.background = "transparent"}
             >{item}</div>
@@ -178,40 +189,42 @@ const AutocompleteInput = ({ value, onChange, suggestions, placeholder }) => {
   );
 };
 
-const Modal = ({title,onClose,children,wide}) => (
-  <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.4)",zIndex:1000,display:"flex",alignItems:"center",justifyContent:"center",padding:16}}
+const Modal = ({title,onClose,children}) => (
+  <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.5)",zIndex:1000,display:"flex",alignItems:"flex-end",justifyContent:"center",padding:0}}
     onClick={e=>e.target===e.currentTarget&&onClose()}>
-    <div style={{background:C.white,border:`1px solid ${C.border}`,borderRadius:16,width:"100%",maxWidth:wide?600:540,maxHeight:"92vh",overflow:"auto",padding:"20px 22px",boxShadow:"0 8px 32px rgba(0,0,0,0.12)"}}>
+    <div style={{background:C.white,borderRadius:"20px 20px 0 0",width:"100%",maxWidth:600,maxHeight:"92vh",overflow:"auto",padding:"20px 20px 32px",boxShadow:"0 -4px 32px rgba(0,0,0,0.15)"}}>
+      {/* Swipe handle */}
+      <div style={{width:40,height:4,borderRadius:2,background:C.border,margin:"0 auto 16px"}}/>
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:18}}>
-        <h2 style={{margin:0,fontSize:17,fontWeight:700,color:C.text}}>{title}</h2>
-        <button onClick={onClose} style={{background:"none",border:"none",cursor:"pointer",color:C.textMuted,padding:4}}><Icon d={Icons.x} size={18}/></button>
+        <h2 style={{margin:0,fontSize:18,fontWeight:700,color:C.text}}>{title}</h2>
+        <button onClick={onClose} style={{background:"none",border:"none",cursor:"pointer",color:C.textMuted,padding:4}}><Icon d={Icons.x} size={20}/></button>
       </div>
       {children}
     </div>
   </div>
 );
 
-// ── NOVINKA 1: GCal nabídka po uložení úkolu ──────────────────────────────
+// GCal nabídka po uložení úkolu
 const GCalPrompt = ({task, companies, contacts, onClose}) => {
   const company = companies.find(c=>c.id===task.company_id);
   const contact = contacts.find(c=>c.id===task.contact_id);
   const link = gcalLink(task, company, contact);
   return (
-    <div style={{textAlign:"center",padding:"8px 0"}}>
-      <div style={{width:56,height:56,borderRadius:"50%",background:"#EEF4FF",display:"flex",alignItems:"center",justifyContent:"center",margin:"0 auto 16px"}}>
-        <Icon d={Icons.calendar} size={28} stroke={C.info}/>
+    <div style={{textAlign:"center",padding:"8px 0 8px"}}>
+      <div style={{width:64,height:64,borderRadius:"50%",background:"#EEF4FF",display:"flex",alignItems:"center",justifyContent:"center",margin:"0 auto 16px"}}>
+        <Icon d={Icons.calendar} size={32} stroke={C.info}/>
       </div>
-      <h3 style={{margin:"0 0 8px",fontSize:18,fontWeight:800,color:C.text}}>Úkol uložen! 🎉</h3>
-      <p style={{margin:"0 0 20px",fontSize:14,color:C.textMuted,lineHeight:1.5}}>
-        Chceš přidat <strong>{task.title}</strong> do Google Kalendáře?
+      <h3 style={{margin:"0 0 8px",fontSize:20,fontWeight:800,color:C.text}}>Úkol uložen! 🎉</h3>
+      <p style={{margin:"0 0 24px",fontSize:15,color:C.textMuted,lineHeight:1.5}}>
+        Přidat <strong>{task.title}</strong> do Google Kalendáře?
         {task.date&&<><br/><span style={{fontSize:13,color:C.textDim}}>{fmtDate(task.date)}{task.time?` · ${task.time}`:""}</span></>}
       </p>
-      <div style={{display:"flex",gap:10,justifyContent:"center",flexWrap:"wrap"}}>
+      <div style={{display:"flex",flexDirection:"column",gap:10}}>
         <a href={link} target="_blank" rel="noreferrer" onClick={onClose}
-          style={{...s.btn("gcal-big"),textDecoration:"none"}}>
+          style={{...s.btn("gcal-big"),textDecoration:"none",justifyContent:"center",width:"100%",boxSizing:"border-box"}}>
           <Icon d={Icons.gcal} size={18}/>Přidat do Google Kalendáře
         </a>
-        <button onClick={onClose} style={{...s.btn("ghost"),padding:"12px 20px",fontSize:14}}>
+        <button onClick={onClose} style={{...s.btn("ghost"),justifyContent:"center",padding:"12px",fontSize:15}}>
           Přeskočit
         </button>
       </div>
@@ -238,20 +251,26 @@ const SectionHeader = ({title,count,onAdd,addLabel="Přidat"}) => (
   </div>
 );
 
+// Sjednocené tlačítko "+" pro všechny sekce v profilu firmy
+const AddButton = ({onClick, title}) => (
+  <button onClick={onClick} title={title} style={{
+    display:"inline-flex", alignItems:"center", justifyContent:"center",
+    width:30, height:30, borderRadius:"50%",
+    border:`2px solid ${C.accent}`, background:C.accentLight,
+    color:C.accent, cursor:"pointer", flexShrink:0,
+    transition:"all 0.15s", padding:0,
+  }}
+    onMouseEnter={e=>{e.currentTarget.style.background=C.accent;e.currentTarget.style.color=C.white;}}
+    onMouseLeave={e=>{e.currentTarget.style.background=C.accentLight;e.currentTarget.style.color=C.accent;}}
+  >
+    <Icon d={Icons.plus} size={14}/>
+  </button>
+);
+
 const CardSectionHeader = ({title, onAdd}) => (
   <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
     <div style={{fontSize:14,fontWeight:700,color:C.text}}>{title}</div>
-    {onAdd&&(
-      <button onClick={onAdd} style={{
-        display:"inline-flex",alignItems:"center",justifyContent:"center",
-        width:28,height:28,borderRadius:"50%",border:`1.5px solid ${C.accent}`,
-        background:C.accentLight,color:C.accent,cursor:"pointer",
-        fontSize:18,lineHeight:1,fontWeight:700,transition:"all 0.15s"
-      }}
-        onMouseEnter={e=>{e.currentTarget.style.background=C.accent;e.currentTarget.style.color=C.white;}}
-        onMouseLeave={e=>{e.currentTarget.style.background=C.accentLight;e.currentTarget.style.color=C.accent;}}
-      >+</button>
-    )}
+    {onAdd&&<AddButton onClick={onAdd} title={`Přidat ${title.toLowerCase()}`}/>}
   </div>
 );
 
@@ -262,7 +281,7 @@ const NoteEntry = ({notes=[],onAdd}) => {
     <div>
       <div style={{display:"flex",gap:8}}>
         <Input value={text} onChange={e=>setText(e.target.value)} placeholder="Poznámka z návštěvy, hovoru…" onKeyDown={e=>e.key==="Enter"&&submit()}/>
-        <button onClick={submit} style={s.btn("primary")}><Icon d={Icons.plus} size={14}/></button>
+        <AddButton onClick={submit} title="Přidat poznámku"/>
       </div>
       <div style={{marginTop:12}}>
         {[...notes].reverse().map((n,i)=>(
@@ -280,9 +299,8 @@ const NoteEntry = ({notes=[],onAdd}) => {
   );
 };
 
-// ── FORMS ─────────────────────────────────────────────────────────────────
+// ── FORMS — single column, fontSize 16px, velké touch targety ─────────────
 
-// NOVINKA 2: TaskForm optimalizovaný pro mobil — single column, větší pole
 const TaskForm = ({initial,companies,contacts,onSave,onClose}) => {
   const [f,setF] = useState(initial||{title:"",type:"Telefonát",company_id:"",contact_id:"",date:today(),time:"",status:"Plánováno",note:""});
   const u = (k,v) => setF(p=>({...p,[k]:v}));
@@ -290,48 +308,34 @@ const TaskForm = ({initial,companies,contacts,onSave,onClose}) => {
   return (
     <div>
       <Field label="Název *">
-        <Input value={f.title} onChange={e=>u("title",e.target.value)} placeholder="Telefonát ohledně nabídky"
-          style={{...s.input, fontSize:16, padding:"11px 14px"}}/>
+        <Input value={f.title} onChange={e=>u("title",e.target.value)} placeholder="Telefonát ohledně nabídky"/>
+      </Field>
+      <Field label="Typ">
+        <MobileSelect options={TASK_TYPES} value={f.type} onChange={e=>u("type",e.target.value)}/>
       </Field>
       <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
-        <Field label="Typ">
-          <select style={{...s.input,appearance:"none",fontSize:16,padding:"11px 14px"}} value={f.type} onChange={e=>u("type",e.target.value)}>
-            {TASK_TYPES.map(o=><option key={o} value={o}>{o}</option>)}
-          </select>
-        </Field>
-        <Field label="Stav">
-          <select style={{...s.input,appearance:"none",fontSize:16,padding:"11px 14px"}} value={f.status} onChange={e=>u("status",e.target.value)}>
-            {STATUSES.task.map(o=><option key={o} value={o}>{o}</option>)}
-          </select>
-        </Field>
         <Field label="Datum">
-          <Input type="date" value={f.date||""} onChange={e=>u("date",e.target.value)}
-            style={{...s.input,fontSize:16,padding:"11px 14px"}}/>
+          <Input type="date" value={f.date||""} onChange={e=>u("date",e.target.value)}/>
         </Field>
         <Field label="Čas">
-          <Input type="time" value={f.time||""} onChange={e=>u("time",e.target.value)}
-            style={{...s.input,fontSize:16,padding:"11px 14px"}}/>
+          <Input type="time" value={f.time||""} onChange={e=>u("time",e.target.value)}/>
         </Field>
       </div>
       <Field label="Firma">
-        <select style={{...s.input,appearance:"none",fontSize:16,padding:"11px 14px"}} value={f.company_id||""} onChange={e=>{u("company_id",e.target.value);u("contact_id","");}}>
-          <option value="">— bez firmy —</option>
-          {companies.map(c=><option key={c.id} value={c.id}>{c.name}</option>)}
-        </select>
+        <MobileSelect options={companies} withEmpty emptyLabel="— bez firmy —" value={f.company_id||""} onChange={e=>{u("company_id",e.target.value);u("contact_id","");}}/>
       </Field>
       <Field label="Kontakt">
-        <select style={{...s.input,appearance:"none",fontSize:16,padding:"11px 14px"}} value={f.contact_id||""} onChange={e=>u("contact_id",e.target.value)}>
-          <option value="">— bez kontaktu —</option>
-          {rc.map(c=><option key={c.id} value={c.id}>{c.name}</option>)}
-        </select>
+        <MobileSelect options={rc} withEmpty emptyLabel="— bez kontaktu —" value={f.contact_id||""} onChange={e=>u("contact_id",e.target.value)}/>
+      </Field>
+      <Field label="Stav">
+        <MobileSelect options={STATUSES.task} value={f.status} onChange={e=>u("status",e.target.value)}/>
       </Field>
       <Field label="Poznámka">
-        <textarea style={{...s.input,minHeight:80,resize:"vertical",fontSize:16,padding:"11px 14px"}}
-          value={f.note||""} onChange={e=>u("note",e.target.value)}/>
+        <Textarea value={f.note||""} onChange={e=>u("note",e.target.value)}/>
       </Field>
       <div style={{display:"flex",gap:10,marginTop:4}}>
-        <button onClick={onClose} style={{...s.btn("ghost"),flex:1,justifyContent:"center",padding:"12px"}}>Zrušit</button>
-        <button onClick={()=>f.title&&onSave(f)} style={{...s.btn("primary"),flex:2,justifyContent:"center",padding:"12px",fontSize:15}}>
+        <button onClick={onClose} style={{...s.btn("ghost"),flex:1,justifyContent:"center",padding:"14px",fontSize:15}}>Zrušit</button>
+        <button onClick={()=>f.title&&onSave(f)} style={{...s.btn("primary"),flex:2,justifyContent:"center",padding:"14px",fontSize:15}}>
           Uložit úkol
         </button>
       </div>
@@ -345,30 +349,40 @@ const DealForm = ({initial,companies,contacts,onSave,onClose}) => {
   const rc = contacts.filter(c=>c.company_id===f.company_id);
   return (
     <div>
-      <Field label="Název *"><Input value={f.title} onChange={e=>u("title",e.target.value)} placeholder="2x HC CPD25"/></Field>
+      <Field label="Název *">
+        <Input value={f.title} onChange={e=>u("title",e.target.value)} placeholder="2x HC CPD25"/>
+      </Field>
+      <Field label="Firma">
+        <MobileSelect options={companies} withEmpty emptyLabel="— vyberte —" value={f.company_id||""} onChange={e=>{u("company_id",e.target.value);u("contact_id","");}}/>
+      </Field>
+      <Field label="Kontakt">
+        <MobileSelect options={rc} withEmpty emptyLabel="— vyberte —" value={f.contact_id||""} onChange={e=>u("contact_id",e.target.value)}/>
+      </Field>
+      <Field label="Typ VZV">
+        <MobileSelect options={VZV_TYPES} withEmpty emptyLabel="— vyberte —" value={f.type||""} onChange={e=>u("type",e.target.value)}/>
+      </Field>
       <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
-        <Field label="Firma">
-          <select style={{...s.input,appearance:"none"}} value={f.company_id||""} onChange={e=>{u("company_id",e.target.value);u("contact_id","");}}>
-            <option value="">— vyberte —</option>
-            {companies.map(c=><option key={c.id} value={c.id}>{c.name}</option>)}
-          </select>
+        <Field label="Počet ks">
+          <Input type="number" value={f.qty||1} onChange={e=>u("qty",e.target.value)} min={1}/>
         </Field>
-        <Field label="Kontakt">
-          <select style={{...s.input,appearance:"none"}} value={f.contact_id||""} onChange={e=>u("contact_id",e.target.value)}>
-            <option value="">— vyberte —</option>
-            {rc.map(c=><option key={c.id} value={c.id}>{c.name}</option>)}
-          </select>
+        <Field label="Hodnota (Kč)">
+          <Input type="number" value={f.value||""} onChange={e=>u("value",e.target.value)} placeholder="0"/>
         </Field>
-        <Field label="Typ VZV"><Select options={VZV_TYPES} value={f.type||""} onChange={e=>u("type",e.target.value)}/></Field>
-        <Field label="Počet ks"><Input type="number" value={f.qty||1} onChange={e=>u("qty",e.target.value)} min={1}/></Field>
-        <Field label="Hodnota (Kč)"><Input type="number" value={f.value||""} onChange={e=>u("value",e.target.value)}/></Field>
-        <Field label="Stav"><Select options={STATUSES.deal} value={f.status} onChange={e=>u("status",e.target.value)}/></Field>
-        <Field label="Datum followupu"><Input type="date" value={f.due_date||""} onChange={e=>u("due_date",e.target.value)}/></Field>
       </div>
-      <Field label="Poznámka"><Textarea value={f.note||""} onChange={e=>u("note",e.target.value)}/></Field>
-      <div style={{display:"flex",justifyContent:"flex-end",gap:8}}>
-        <button onClick={onClose} style={s.btn("ghost")}>Zrušit</button>
-        <button onClick={()=>f.title&&onSave(f)} style={s.btn("primary")}>Uložit</button>
+      <Field label="Stav">
+        <MobileSelect options={STATUSES.deal} value={f.status} onChange={e=>u("status",e.target.value)}/>
+      </Field>
+      <Field label="Datum followupu">
+        <Input type="date" value={f.due_date||""} onChange={e=>u("due_date",e.target.value)}/>
+      </Field>
+      <Field label="Poznámka">
+        <Textarea value={f.note||""} onChange={e=>u("note",e.target.value)}/>
+      </Field>
+      <div style={{display:"flex",gap:10,marginTop:4}}>
+        <button onClick={onClose} style={{...s.btn("ghost"),flex:1,justifyContent:"center",padding:"14px",fontSize:15}}>Zrušit</button>
+        <button onClick={()=>f.title&&onSave(f)} style={{...s.btn("primary"),flex:2,justifyContent:"center",padding:"14px",fontSize:15}}>
+          Uložit deal
+        </button>
       </div>
     </div>
   );
@@ -379,18 +393,18 @@ const CompanyForm = ({initial,onSave,onClose}) => {
   const u = (k,v) => setF(p=>({...p,[k]:v}));
   return (
     <div>
+      <Field label="Název *"><Input value={f.name} onChange={e=>u("name",e.target.value)} placeholder="Firma s.r.o."/></Field>
       <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
-        <Field label="Název *"><Input value={f.name} onChange={e=>u("name",e.target.value)} placeholder="Firma s.r.o."/></Field>
         <Field label="IČO"><Input value={f.ico||""} onChange={e=>u("ico",e.target.value)}/></Field>
-        <Field label="Odvětví"><Select options={INDUSTRIES} value={f.industry||""} onChange={e=>u("industry",e.target.value)}/></Field>
-        <Field label="Stav"><Select options={STATUSES.company} value={f.status} onChange={e=>u("status",e.target.value)}/></Field>
-        <Field label="Adresa"><Input value={f.address||""} onChange={e=>u("address",e.target.value)} placeholder="Ústí nad Labem"/></Field>
         <Field label="Počet VZV"><Input type="number" value={f.fleet||0} onChange={e=>u("fleet",Number(e.target.value))}/></Field>
-        <Field label="Stávající dodavatel"><Select options={COMPETITORS} value={f.competitor||""} onChange={e=>u("competitor",e.target.value)}/></Field>
       </div>
-      <div style={{display:"flex",justifyContent:"flex-end",gap:8,marginTop:4}}>
-        <button onClick={onClose} style={s.btn("ghost")}>Zrušit</button>
-        <button onClick={()=>f.name&&onSave(f)} style={s.btn("primary")}>Uložit</button>
+      <Field label="Odvětví"><MobileSelect options={INDUSTRIES} withEmpty emptyLabel="— vyberte —" value={f.industry||""} onChange={e=>u("industry",e.target.value)}/></Field>
+      <Field label="Stav"><MobileSelect options={STATUSES.company} value={f.status} onChange={e=>u("status",e.target.value)}/></Field>
+      <Field label="Adresa"><Input value={f.address||""} onChange={e=>u("address",e.target.value)} placeholder="Ústí nad Labem"/></Field>
+      <Field label="Stávající dodavatel"><MobileSelect options={COMPETITORS} withEmpty emptyLabel="— vyberte —" value={f.competitor||""} onChange={e=>u("competitor",e.target.value)}/></Field>
+      <div style={{display:"flex",gap:10,marginTop:4}}>
+        <button onClick={onClose} style={{...s.btn("ghost"),flex:1,justifyContent:"center",padding:"14px",fontSize:15}}>Zrušit</button>
+        <button onClick={()=>f.name&&onSave(f)} style={{...s.btn("primary"),flex:2,justifyContent:"center",padding:"14px",fontSize:15}}>Uložit</button>
       </div>
     </div>
   );
@@ -401,27 +415,26 @@ const ContactForm = ({initial,companies,onSave,onClose}) => {
   const u = (k,v) => setF(p=>({...p,[k]:v}));
   return (
     <div>
+      <Field label="Jméno *"><Input value={f.name} onChange={e=>u("name",e.target.value)}/></Field>
+      <Field label="Firma">
+        <MobileSelect options={companies} withEmpty emptyLabel="— bez firmy —" value={f.company_id||""} onChange={e=>u("company_id",e.target.value)}/>
+      </Field>
       <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
-        <Field label="Jméno *"><Input value={f.name} onChange={e=>u("name",e.target.value)}/></Field>
-        <Field label="Firma">
-          <select style={{...s.input,appearance:"none"}} value={f.company_id||""} onChange={e=>u("company_id",e.target.value)}>
-            <option value="">— bez firmy —</option>
-            {companies.map(c=><option key={c.id} value={c.id}>{c.name}</option>)}
-          </select>
-        </Field>
         <Field label="Pozice"><Input value={f.position||""} onChange={e=>u("position",e.target.value)}/></Field>
-        <Field label="Role"><Select options={["Rozhodovatel","Influencer","Uživatel","Blokátor"]} value={f.role||""} onChange={e=>u("role",e.target.value)}/></Field>
-        <Field label="Telefon"><Input value={f.phone||""} onChange={e=>u("phone",e.target.value)} placeholder="+420 777 000 000"/></Field>
+        <Field label="Role"><MobileSelect options={["Rozhodovatel","Influencer","Uživatel","Blokátor"]} value={f.role||""} onChange={e=>u("role",e.target.value)}/></Field>
+      </div>
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
+        <Field label="Telefon"><Input value={f.phone||""} onChange={e=>u("phone",e.target.value)} placeholder="+420 777…"/></Field>
         <Field label="E-mail"><Input value={f.email||""} onChange={e=>u("email",e.target.value)}/></Field>
       </div>
       <Field label="LinkedIn"><Input value={f.linkedin||""} onChange={e=>u("linkedin",e.target.value)}/></Field>
-      <Field label="Poznámka (obchodní)"><Textarea value={f.note||""} onChange={e=>u("note",e.target.value)} placeholder="Obchodní poznámky…"/></Field>
-      <Field label="😊 Osobní poznámky (záliby, charakter…)">
-        <Textarea value={f.personal_note||""} onChange={e=>u("personal_note",e.target.value)} placeholder="Např: Rád hraje golf, má psa, komunikuje přímočaře…"/>
+      <Field label="Poznámka (obchodní)"><Textarea value={f.note||""} onChange={e=>u("note",e.target.value)}/></Field>
+      <Field label="😊 Osobní poznámky">
+        <Textarea value={f.personal_note||""} onChange={e=>u("personal_note",e.target.value)} placeholder="Záliby, charakter, rodina…"/>
       </Field>
-      <div style={{display:"flex",justifyContent:"flex-end",gap:8}}>
-        <button onClick={onClose} style={s.btn("ghost")}>Zrušit</button>
-        <button onClick={()=>f.name&&onSave(f)} style={s.btn("primary")}>Uložit</button>
+      <div style={{display:"flex",gap:10,marginTop:4}}>
+        <button onClick={onClose} style={{...s.btn("ghost"),flex:1,justifyContent:"center",padding:"14px",fontSize:15}}>Zrušit</button>
+        <button onClick={()=>f.name&&onSave(f)} style={{...s.btn("primary"),flex:2,justifyContent:"center",padding:"14px",fontSize:15}}>Uložit</button>
       </div>
     </div>
   );
@@ -584,7 +597,7 @@ const Companies = ({data,ops,focusId,onClearFocus}) => {
         {data.contacts.filter(ct=>ct.company_id===dc.id).length===0&&<div style={{fontSize:12,color:C.textDim}}>Žádné kontakty</div>}
       </div>
       <div style={s.card}>
-        <div style={{fontSize:14,fontWeight:700,color:C.text,marginBottom:12}}>Poznámky z terénu</div>
+        <CardSectionHeader title="Poznámky z terénu" onAdd={null}/>
         <NoteEntry notes={dc.notes||[]} onAdd={async(text)=>{await ops.upsertCompany({...dc,notes:[...(dc.notes||[]),{text,date:today()}]});}}/>
       </div>
       <div style={s.card}>
@@ -601,7 +614,7 @@ const Companies = ({data,ops,focusId,onClearFocus}) => {
         ))}
         {data.tasks.filter(t=>t.company_id===dc.id).length===0&&<div style={{fontSize:12,color:C.textDim}}>Žádné úkoly</div>}
       </div>
-      {modal==="edit"&&<Modal title="Upravit firmu" onClose={()=>setModal(null)}><CompanyForm initial={dc} onSave={async(f)=>{await ops.upsertCompany({...dc,...f});setModal(null);}} onClose={()=>setModal(null)}/></Modal>}
+      {modal==="edit"&&<Modal title="Upravit firmu" onClose={()=>setModal(null)}><CompanyForm initial={dc} onSave={async(f)=>{await ops.upsertCompany({...dc,...clean(f)});setModal(null);}} onClose={()=>setModal(null)}/></Modal>}
       {modal==="newDeal"&&<Modal title="Nový deal" onClose={()=>setModal(null)}>
         <DealForm initial={{title:"",company_id:dc.id,contact_id:"",type:"",qty:1,value:"",status:"Identifikováno",due_date:"",note:""}} companies={data.companies} contacts={data.contacts}
           onSave={async(f)=>{await ops.upsertDeal({...clean(f),id:uid(),qty:Number(f.qty)||1,value:Number(f.value)||0});setModal(null);}} onClose={()=>setModal(null)}/>
@@ -851,7 +864,6 @@ const Tasks = ({data,ops}) => {
             const saved = modal==="new"?{...clean(f),id:uid()}:{...data.tasks.find(t=>t.id===modal),...clean(f)};
             await ops.upsertTask(saved);
             setModal(null);
-            // Po uložení nabídni GCal
             if(modal==="new") setGcalTask(saved);
           }}
           onClose={()=>setModal(null)}/>
