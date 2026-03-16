@@ -87,11 +87,12 @@ const COMPETITORS = ["Toyota","Linde","Jungheinrich","Still","Crown","Manitou","
 
 const uid = () => Math.random().toString(36).slice(2,9);
 const today = () => new Date().toISOString().split("T")[0];
+// Převede prázdné stringy na null před odesláním do databáze
+const clean = (obj) => Object.fromEntries(Object.entries(obj).map(([k,v])=>[k, v===""?null:v]));
 const fmtDate = (d) => d ? new Date(d).toLocaleDateString("cs-CZ",{day:"2-digit",month:"2-digit",year:"numeric"}) : "—";
 const fmtMoney = (n) => n ? new Intl.NumberFormat("cs-CZ",{style:"currency",currency:"CZK",maximumFractionDigits:0}).format(n) : "—";
 const isOverdue = (date,status) => date && !["Dokončeno","Zrušeno","Vyhráno","Prohráno"].includes(status) && new Date(date) < new Date(today());
 
-// Google Calendar link s časem
 const gcalLink = (task, company, contact) => {
   const base = "https://calendar.google.com/calendar/render?action=TEMPLATE";
   const title = encodeURIComponent(`[VZV] ${task.title}${company?" – "+company.name:""}`);
@@ -99,14 +100,12 @@ const gcalLink = (task, company, contact) => {
   const dateStr = task.date || today();
   let dates;
   if (task.time) {
-    // S časem — event s konkrétním časem (1 hodina)
     const start = `${dateStr.replace(/-/g,"")}T${task.time.replace(":","")}00`;
     const [h,m] = task.time.split(":").map(Number);
     const endH = String(h+1).padStart(2,"0");
     const end = `${dateStr.replace(/-/g,"")}T${endH}${String(m).padStart(2,"0")}00`;
     dates = `${start}/${end}`;
   } else {
-    // Bez času — celý den
     const d = dateStr.replace(/-/g,"");
     dates = `${d}/${d}`;
   }
@@ -123,7 +122,6 @@ const s = {
        v==="ghost"?{background:"transparent",color:C.textMuted,border:`1px solid ${C.border}`}:
        v==="danger"?{background:`${C.danger}10`,color:C.danger,border:`1px solid ${C.danger}30`}:
        v==="gcal"?{background:"#EEF4FF",color:C.info,border:`1px solid ${C.info}30`}:
-       v==="add"?{background:C.accentLight,color:C.accent,border:`1px solid ${C.accent}40`,borderRadius:"50%",padding:"4px",width:28,height:28,justifyContent:"center"}:
        {background:C.bg,color:C.text,border:`1px solid ${C.border}`}),
   }),
   label: { display:"block", fontSize:11, fontWeight:700, color:C.textMuted, marginBottom:5, letterSpacing:"0.6px", textTransform:"uppercase" },
@@ -211,7 +209,6 @@ const SectionHeader = ({title,count,onAdd,addLabel="Přidat"}) => (
   </div>
 );
 
-// Hlavička sekce s tlačítkem "+"
 const CardSectionHeader = ({title, onAdd}) => (
   <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
     <div style={{fontSize:14,fontWeight:700,color:C.text}}>{title}</div>
@@ -219,12 +216,12 @@ const CardSectionHeader = ({title, onAdd}) => (
       <button onClick={onAdd} style={{
         display:"inline-flex",alignItems:"center",justifyContent:"center",
         width:28,height:28,borderRadius:"50%",border:`1.5px solid ${C.accent}`,
-        background:C.accentLight,color:C.accent,cursor:"pointer",flexShrink:0,
+        background:C.accentLight,color:C.accent,cursor:"pointer",
         fontSize:18,lineHeight:1,fontWeight:700,transition:"all 0.15s"
       }}
         onMouseEnter={e=>{e.currentTarget.style.background=C.accent;e.currentTarget.style.color=C.white;}}
         onMouseLeave={e=>{e.currentTarget.style.background=C.accentLight;e.currentTarget.style.color=C.accent;}}
-        title={`Přidat ${title.toLowerCase()}`}>+</button>
+      >+</button>
     )}
   </div>
 );
@@ -559,11 +556,11 @@ const Companies = ({data,ops,focusId,onClearFocus}) => {
       {modal==="edit"&&<Modal title="Upravit firmu" onClose={()=>setModal(null)}><CompanyForm initial={dc} onSave={async(f)=>{await ops.upsertCompany({...dc,...f});setModal(null);}} onClose={()=>setModal(null)}/></Modal>}
       {modal==="newDeal"&&<Modal title="Nový deal" onClose={()=>setModal(null)}>
         <DealForm initial={{title:"",company_id:dc.id,contact_id:"",type:"",qty:1,value:"",status:"Identifikováno",due_date:"",note:""}} companies={data.companies} contacts={data.contacts}
-          onSave={async(f)=>{await ops.upsertDeal({...f,id:uid(),qty:Number(f.qty)||1,value:Number(f.value)||0});setModal(null);}} onClose={()=>setModal(null)}/>
+          onSave={async(f)=>{await ops.upsertDeal({...clean(f),id:uid(),qty:Number(f.qty)||1,value:Number(f.value)||0});setModal(null);}} onClose={()=>setModal(null)}/>
       </Modal>}
       {modal==="newTask"&&<Modal title="Nový úkol" onClose={()=>setModal(null)}>
         <TaskForm initial={{title:"",type:"Telefonát",company_id:dc.id,contact_id:"",date:today(),time:"",status:"Plánováno",note:""}} companies={data.companies} contacts={data.contacts}
-          onSave={async(f)=>{await ops.upsertTask({...f,id:uid()});setModal(null);}} onClose={()=>setModal(null)}/>
+          onSave={async(f)=>{await ops.upsertTask({...clean(f),id:uid()});setModal(null);}} onClose={()=>setModal(null)}/>
       </Modal>}
     </div>
   );
@@ -603,7 +600,7 @@ const Companies = ({data,ops,focusId,onClearFocus}) => {
         </div>
       ))}
       {filtered.length===0&&<div style={{textAlign:"center",padding:"40px 0",color:C.textDim}}>Žádné firmy</div>}
-      {modal==="new"&&<Modal title="Nová firma" onClose={()=>setModal(null)}><CompanyForm onSave={async(f)=>{await ops.upsertCompany({...f,id:uid(),notes:[],created:today()});setModal(null);}} onClose={()=>setModal(null)}/></Modal>}
+      {modal==="new"&&<Modal title="Nová firma" onClose={()=>setModal(null)}><CompanyForm onSave={async(f)=>{await ops.upsertCompany({...clean(f),id:uid(),notes:[],created:today()});setModal(null);}} onClose={()=>setModal(null)}/></Modal>}
     </div>
   );
 };
@@ -618,9 +615,7 @@ const Contacts = ({data,ops,onNavigateToCompany}) => {
   );
 
   const handleContactClick = (ct) => {
-    if (ct.company_id) {
-      onNavigateToCompany(ct.company_id);
-    }
+    if (ct.company_id) onNavigateToCompany(ct.company_id);
   };
 
   return (
@@ -636,13 +631,11 @@ const Contacts = ({data,ops,onNavigateToCompany}) => {
             <div key={ct.id} style={s.card}>
               <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:8}}>
                 <div>
-                  {/* Klik na jméno → profil firmy */}
                   <div onClick={()=>handleContactClick(ct)}
                     style={{fontWeight:700,fontSize:14,color:ct.company_id?C.accent:C.text,cursor:ct.company_id?"pointer":"default",marginBottom:2}}>
                     {ct.name}
                   </div>
                   <div style={{fontSize:12,color:C.textMuted}}>{ct.position}</div>
-                  {/* Klik na firmu → profil firmy */}
                   {company&&(
                     <div onClick={()=>handleContactClick(ct)}
                       style={{fontSize:11,color:C.accent,marginTop:2,cursor:"pointer",display:"flex",alignItems:"center",gap:3,fontWeight:500}}>
@@ -670,7 +663,7 @@ const Contacts = ({data,ops,onNavigateToCompany}) => {
       {filtered.length===0&&<div style={{textAlign:"center",padding:"40px 0",color:C.textDim}}>Žádné kontakty</div>}
       {modal&&<Modal title={modal==="new"?"Nový kontakt":"Upravit kontakt"} onClose={()=>setModal(null)}>
         <ContactForm initial={modal!=="new"?data.contacts.find(c=>c.id===modal):undefined} companies={data.companies}
-          onSave={async(f)=>{await ops.upsertContact(modal==="new"?{...f,id:uid()}:{...data.contacts.find(c=>c.id===modal),...f});setModal(null);}}
+          onSave={async(f)=>{await ops.upsertContact(modal==="new"?{...clean(f),id:uid()}:{...data.contacts.find(c=>c.id===modal),...clean(f)});setModal(null);}}
           onClose={()=>setModal(null)}/>
       </Modal>}
     </div>
@@ -731,7 +724,7 @@ const Deals = ({data,ops}) => {
       {filtered.length===0&&<div style={{textAlign:"center",padding:"40px 0",color:C.textDim}}>Žádné příležitosti</div>}
       {modal&&<Modal title={modal==="new"?"Nová příležitost":"Upravit příležitost"} onClose={()=>setModal(null)}>
         <DealForm initial={modal!=="new"?data.deals.find(d=>d.id===modal):undefined} companies={data.companies} contacts={data.contacts}
-          onSave={async(f)=>{await ops.upsertDeal(modal==="new"?{...f,id:uid(),qty:Number(f.qty)||1,value:Number(f.value)||0}:{...data.deals.find(d=>d.id===modal),...f,qty:Number(f.qty)||1,value:Number(f.value)||0});setModal(null);}}
+          onSave={async(f)=>{await ops.upsertDeal(modal==="new"?{...clean(f),id:uid(),qty:Number(f.qty)||1,value:Number(f.value)||0}:{...data.deals.find(d=>d.id===modal),...clean(f),qty:Number(f.qty)||1,value:Number(f.value)||0});setModal(null);}}
           onClose={()=>setModal(null)}/>
       </Modal>}
     </div>
@@ -767,13 +760,11 @@ const Tasks = ({data,ops}) => {
         const od=isOverdue(t.date,t.status);
         return (
           <div key={t.id} style={{...s.card,borderLeft:`3px solid ${od?C.danger:STATUS_COLORS[t.status]||C.border}`}}>
-            {/* Název, typ, stav */}
             <div style={{display:"flex",gap:6,alignItems:"flex-start",flexWrap:"wrap",marginBottom:4}}>
               <span style={{fontWeight:700,fontSize:14,color:od?C.danger:C.text,flex:1,minWidth:0}}>{t.title}</span>
               <span style={s.badge(C.info)}>{t.type}</span>
               <StatusBadge status={t.status}/>
             </div>
-            {/* Firma, kontakt, datum+čas */}
             <div style={{fontSize:12,color:C.textMuted,display:"flex",gap:6,flexWrap:"wrap",marginBottom:6}}>
               {company&&<span>{company.name}</span>}
               {contact&&<span>· {contact.name}</span>}
@@ -782,7 +773,6 @@ const Tasks = ({data,ops}) => {
               </span>
             </div>
             {t.note&&<div style={{fontSize:12,color:C.textDim,marginBottom:8,fontStyle:"italic"}}>{t.note}</div>}
-            {/* Akční tlačítka POD textem — oprava pro mobil */}
             <div style={{display:"flex",gap:6,flexWrap:"wrap",paddingTop:8,borderTop:`1px solid ${C.border}`}}>
               <a href={gcalLink(t,company,contact)} target="_blank" rel="noreferrer"
                 style={{...s.btn("gcal"),textDecoration:"none",padding:"6px 10px",fontSize:12}}>
@@ -790,7 +780,7 @@ const Tasks = ({data,ops}) => {
               </a>
               {t.status!=="Dokončeno"&&(
                 <button onClick={()=>ops.upsertTask({...t,status:"Dokončeno"})}
-                  style={{...s.btn("ghost"),padding:"6px 10px",fontSize:12}} title="Označit jako hotovo">
+                  style={{...s.btn("ghost"),padding:"6px 10px",fontSize:12}}>
                   <Icon d={Icons.check} size={13}/>Hotovo
                 </button>
               )}
@@ -807,7 +797,7 @@ const Tasks = ({data,ops}) => {
       {filtered.length===0&&<div style={{textAlign:"center",padding:"40px 0",color:C.textDim}}>Žádné úkoly</div>}
       {modal&&<Modal title={modal==="new"?"Nový úkol":"Upravit úkol"} onClose={()=>setModal(null)}>
         <TaskForm initial={modal!=="new"?data.tasks.find(t=>t.id===modal):undefined} companies={data.companies} contacts={data.contacts}
-          onSave={async(f)=>{await ops.upsertTask(modal==="new"?{...f,id:uid()}:{...data.tasks.find(t=>t.id===modal),...f});setModal(null);}}
+          onSave={async(f)=>{await ops.upsertTask(modal==="new"?{...clean(f),id:uid()}:{...data.tasks.find(t=>t.id===modal),...clean(f)});setModal(null);}}
           onClose={()=>setModal(null)}/>
       </Modal>}
     </div>
