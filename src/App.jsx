@@ -58,7 +58,6 @@ const Icons = {
   search: ["M11 17a6 6 0 100-12 6 6 0 000 12z","M21 21l-4.35-4.35"],
   clock: ["M12 22a10 10 0 100-20 10 10 0 000 20z","M12 6v6l4 2"],
   gcal: ["M19 4H5a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2V6a2 2 0 00-2-2z","M16 2v4M8 2v4M3 10h18","M8 14h.01M12 14h.01M16 14h.01"],
-  externalLink: ["M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6","M15 3h6v6","M10 14L21 3"],
 };
 
 const C = {
@@ -91,12 +90,27 @@ const today = () => new Date().toISOString().split("T")[0];
 const fmtDate = (d) => d ? new Date(d).toLocaleDateString("cs-CZ",{day:"2-digit",month:"2-digit",year:"numeric"}) : "—";
 const fmtMoney = (n) => n ? new Intl.NumberFormat("cs-CZ",{style:"currency",currency:"CZK",maximumFractionDigits:0}).format(n) : "—";
 const isOverdue = (date,status) => date && !["Dokončeno","Zrušeno","Vyhráno","Prohráno"].includes(status) && new Date(date) < new Date(today());
+
+// Google Calendar link s časem
 const gcalLink = (task, company, contact) => {
   const base = "https://calendar.google.com/calendar/render?action=TEMPLATE";
   const title = encodeURIComponent(`[VZV] ${task.title}${company?" – "+company.name:""}`);
   const details = encodeURIComponent(`Typ: ${task.type}\n${contact?"Kontakt: "+contact.name:""}\n${task.note||""}`);
-  const d = (task.date||today()).replace(/-/g,"");
-  return `${base}&text=${title}&dates=${d}/${d}&details=${details}`;
+  const dateStr = task.date || today();
+  let dates;
+  if (task.time) {
+    // S časem — event s konkrétním časem (1 hodina)
+    const start = `${dateStr.replace(/-/g,"")}T${task.time.replace(":","")}00`;
+    const [h,m] = task.time.split(":").map(Number);
+    const endH = String(h+1).padStart(2,"0");
+    const end = `${dateStr.replace(/-/g,"")}T${endH}${String(m).padStart(2,"0")}00`;
+    dates = `${start}/${end}`;
+  } else {
+    // Bez času — celý den
+    const d = dateStr.replace(/-/g,"");
+    dates = `${d}/${d}`;
+  }
+  return `${base}&text=${title}&dates=${dates}&details=${details}`;
 };
 
 const s = {
@@ -109,7 +123,7 @@ const s = {
        v==="ghost"?{background:"transparent",color:C.textMuted,border:`1px solid ${C.border}`}:
        v==="danger"?{background:`${C.danger}10`,color:C.danger,border:`1px solid ${C.danger}30`}:
        v==="gcal"?{background:"#EEF4FF",color:C.info,border:`1px solid ${C.info}30`}:
-       v==="link"?{background:"transparent",color:C.accent,border:"none",padding:"2px 4px",fontSize:12}:
+       v==="add"?{background:C.accentLight,color:C.accent,border:`1px solid ${C.accent}40`,borderRadius:"50%",padding:"4px",width:28,height:28,justifyContent:"center"}:
        {background:C.bg,color:C.text,border:`1px solid ${C.border}`}),
   }),
   label: { display:"block", fontSize:11, fontWeight:700, color:C.textMuted, marginBottom:5, letterSpacing:"0.6px", textTransform:"uppercase" },
@@ -197,6 +211,24 @@ const SectionHeader = ({title,count,onAdd,addLabel="Přidat"}) => (
   </div>
 );
 
+// Hlavička sekce s tlačítkem "+"
+const CardSectionHeader = ({title, onAdd}) => (
+  <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
+    <div style={{fontSize:14,fontWeight:700,color:C.text}}>{title}</div>
+    {onAdd&&(
+      <button onClick={onAdd} style={{
+        display:"inline-flex",alignItems:"center",justifyContent:"center",
+        width:28,height:28,borderRadius:"50%",border:`1.5px solid ${C.accent}`,
+        background:C.accentLight,color:C.accent,cursor:"pointer",flexShrink:0,
+        fontSize:18,lineHeight:1,fontWeight:700,transition:"all 0.15s"
+      }}
+        onMouseEnter={e=>{e.currentTarget.style.background=C.accent;e.currentTarget.style.color=C.white;}}
+        onMouseLeave={e=>{e.currentTarget.style.background=C.accentLight;e.currentTarget.style.color=C.accent;}}
+        title={`Přidat ${title.toLowerCase()}`}>+</button>
+    )}
+  </div>
+);
+
 const NoteEntry = ({notes=[],onAdd}) => {
   const [text,setText] = useState("");
   const submit = () => { if(text.trim()){onAdd(text.trim());setText("");} };
@@ -222,10 +254,10 @@ const NoteEntry = ({notes=[],onAdd}) => {
   );
 };
 
-// ── FORMS (definované PŘED komponentami které je používají) ────────────────
+// ── FORMS ─────────────────────────────────────────────────────────────────
 
 const TaskForm = ({initial,companies,contacts,onSave,onClose}) => {
-  const [f,setF] = useState(initial||{title:"",type:"Telefonát",company_id:"",contact_id:"",date:today(),status:"Plánováno",note:""});
+  const [f,setF] = useState(initial||{title:"",type:"Telefonát",company_id:"",contact_id:"",date:today(),time:"",status:"Plánováno",note:""});
   const u = (k,v) => setF(p=>({...p,[k]:v}));
   const rc = f.company_id ? contacts.filter(c=>c.company_id===f.company_id) : contacts;
   return (
@@ -234,6 +266,8 @@ const TaskForm = ({initial,companies,contacts,onSave,onClose}) => {
       <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
         <Field label="Typ"><Select options={TASK_TYPES} value={f.type} onChange={e=>u("type",e.target.value)}/></Field>
         <Field label="Stav"><Select options={STATUSES.task} value={f.status} onChange={e=>u("status",e.target.value)}/></Field>
+        <Field label="Datum"><Input type="date" value={f.date||""} onChange={e=>u("date",e.target.value)}/></Field>
+        <Field label="Čas (nepovinný)"><Input type="time" value={f.time||""} onChange={e=>u("time",e.target.value)}/></Field>
         <Field label="Firma">
           <select style={{...s.input,appearance:"none"}} value={f.company_id||""} onChange={e=>{u("company_id",e.target.value);u("contact_id","");}}>
             <option value="">— bez firmy —</option>
@@ -246,7 +280,6 @@ const TaskForm = ({initial,companies,contacts,onSave,onClose}) => {
             {rc.map(c=><option key={c.id} value={c.id}>{c.name}</option>)}
           </select>
         </Field>
-        <Field label="Datum"><Input type="date" value={f.date||""} onChange={e=>u("date",e.target.value)}/></Field>
       </div>
       <Field label="Poznámka"><Textarea value={f.note||""} onChange={e=>u("note",e.target.value)}/></Field>
       <div style={{display:"flex",justifyContent:"flex-end",gap:8}}>
@@ -345,7 +378,7 @@ const ContactForm = ({initial,companies,onSave,onClose}) => {
   );
 };
 
-// ── DASHBOARD ──────────────────────────────────────────────────────────────
+// ── DASHBOARD ─────────────────────────────────────────────────────────────
 const Dashboard = ({data,onNavigate}) => {
   const {companies,contacts,deals,tasks} = data;
   const activeDeals = deals.filter(d=>!["Vyhráno","Prohráno"].includes(d.status));
@@ -406,7 +439,7 @@ const Dashboard = ({data,onNavigate}) => {
                 <div style={{width:6,height:6,borderRadius:3,background:od?C.danger:C.accent,marginTop:4,flexShrink:0}}/>
                 <div style={{flex:1,minWidth:0}}>
                   <div style={{fontSize:13,color:od?C.danger:C.text,fontWeight:500,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{t.title}</div>
-                  <div style={{fontSize:11,color:C.textDim}}>{company?.name} · {fmtDate(t.date)}</div>
+                  <div style={{fontSize:11,color:C.textDim}}>{company?.name} · {fmtDate(t.date)}{t.time?` · ${t.time}`:""}</div>
                 </div>
                 <span style={s.badge(od?C.danger:C.info)}>{t.type}</span>
               </div>
@@ -434,13 +467,12 @@ const Dashboard = ({data,onNavigate}) => {
   );
 };
 
-// ── COMPANIES ──────────────────────────────────────────────────────────────
+// ── COMPANIES ─────────────────────────────────────────────────────────────
 const Companies = ({data,ops,focusId,onClearFocus}) => {
   const [modal,setModal] = useState(null);
   const [search,setSearch] = useState("");
   const [filter,setFilter] = useState("Vše");
   const [detail,setDetail] = useState(focusId||null);
-  const [quickModal,setQuickModal] = useState(null);
   useEffect(()=>{if(focusId){setDetail(focusId);onClearFocus&&onClearFocus();}}, [focusId]);
 
   const companyNames = data.companies.map(c=>c.name);
@@ -468,6 +500,7 @@ const Companies = ({data,ops,focusId,onClearFocus}) => {
           <button onClick={async()=>{await ops.deleteCompany(dc.id);setDetail(null);}} style={s.btn("danger")}><Icon d={Icons.trash} size={13}/></button>
         </div>
       </div>
+
       <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14,marginBottom:14}}>
         <div style={s.card}>
           <div style={{fontSize:11,fontWeight:700,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.5px",marginBottom:8}}>Info</div>
@@ -475,7 +508,7 @@ const Companies = ({data,ops,focusId,onClearFocus}) => {
           {dc.ico&&<div style={{fontSize:12,color:C.textDim,marginTop:3}}>IČO: {dc.ico}</div>}
         </div>
         <div style={s.card}>
-          <div style={{fontSize:11,fontWeight:700,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.5px",marginBottom:8}}>Dealy</div>
+          <CardSectionHeader title="Dealy" onAdd={()=>setModal("newDeal")}/>
           {data.deals.filter(d=>d.company_id===dc.id).map(d=>(
             <div key={d.id} style={{marginBottom:8}}>
               <div style={{fontSize:13,color:C.text,fontWeight:500}}>{d.title}</div>
@@ -485,6 +518,7 @@ const Companies = ({data,ops,focusId,onClearFocus}) => {
           {data.deals.filter(d=>d.company_id===dc.id).length===0&&<div style={{fontSize:12,color:C.textDim}}>Žádné dealy</div>}
         </div>
       </div>
+
       <div style={s.card}>
         <div style={{fontSize:14,fontWeight:700,color:C.text,marginBottom:12}}>Kontaktní osoby</div>
         {data.contacts.filter(ct=>ct.company_id===dc.id).map(ct=>(
@@ -501,33 +535,35 @@ const Companies = ({data,ops,focusId,onClearFocus}) => {
         ))}
         {data.contacts.filter(ct=>ct.company_id===dc.id).length===0&&<div style={{fontSize:12,color:C.textDim}}>Žádné kontakty</div>}
       </div>
+
       <div style={s.card}>
         <div style={{fontSize:14,fontWeight:700,color:C.text,marginBottom:12}}>Poznámky z terénu</div>
         <NoteEntry notes={dc.notes||[]} onAdd={async(text)=>{await ops.upsertCompany({...dc,notes:[...(dc.notes||[]),{text,date:today()}]});}}/>
       </div>
+
       <div style={s.card}>
-        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
-          <div style={{fontSize:14,fontWeight:700,color:C.text}}>Úkoly</div>
-          <button onClick={()=>setQuickModal({type:"task",companyId:dc.id})} style={{...s.btn("ghost"),padding:"5px 10px",fontSize:11}}>
-            <Icon d={Icons.plus} size={11}/>+ Úkol
-          </button>
-        </div>
+        <CardSectionHeader title="Úkoly" onAdd={()=>setModal("newTask")}/>
         {data.tasks.filter(t=>t.company_id===dc.id).map(t=>(
           <div key={t.id} style={{display:"flex",gap:8,alignItems:"center",padding:"8px 0",borderBottom:`1px solid ${C.border}`}}>
             <div style={{width:6,height:6,borderRadius:3,background:STATUS_COLORS[t.status],flexShrink:0}}/>
             <div style={{flex:1}}>
               <div style={{fontSize:13,color:C.text,fontWeight:500}}>{t.title}</div>
-              <div style={{fontSize:11,color:C.textDim}}>{t.type} · {fmtDate(t.date)}</div>
+              <div style={{fontSize:11,color:C.textDim}}>{t.type} · {fmtDate(t.date)}{t.time?` · ${t.time}`:""}</div>
             </div>
             <StatusBadge status={t.status}/>
           </div>
         ))}
         {data.tasks.filter(t=>t.company_id===dc.id).length===0&&<div style={{fontSize:12,color:C.textDim}}>Žádné úkoly</div>}
       </div>
+
       {modal==="edit"&&<Modal title="Upravit firmu" onClose={()=>setModal(null)}><CompanyForm initial={dc} onSave={async(f)=>{await ops.upsertCompany({...dc,...f});setModal(null);}} onClose={()=>setModal(null)}/></Modal>}
-      {quickModal?.type==="task"&&<Modal title="Nový úkol" onClose={()=>setQuickModal(null)}>
-        <TaskForm initial={{title:"",type:"Telefonát",company_id:dc.id,contact_id:"",date:today(),status:"Plánováno",note:""}} companies={data.companies} contacts={data.contacts}
-          onSave={async(f)=>{await ops.upsertTask({...f,id:uid()});setQuickModal(null);}} onClose={()=>setQuickModal(null)}/>
+      {modal==="newDeal"&&<Modal title="Nový deal" onClose={()=>setModal(null)}>
+        <DealForm initial={{title:"",company_id:dc.id,contact_id:"",type:"",qty:1,value:"",status:"Identifikováno",due_date:"",note:""}} companies={data.companies} contacts={data.contacts}
+          onSave={async(f)=>{await ops.upsertDeal({...f,id:uid(),qty:Number(f.qty)||1,value:Number(f.value)||0});setModal(null);}} onClose={()=>setModal(null)}/>
+      </Modal>}
+      {modal==="newTask"&&<Modal title="Nový úkol" onClose={()=>setModal(null)}>
+        <TaskForm initial={{title:"",type:"Telefonát",company_id:dc.id,contact_id:"",date:today(),time:"",status:"Plánováno",note:""}} companies={data.companies} contacts={data.contacts}
+          onSave={async(f)=>{await ops.upsertTask({...f,id:uid()});setModal(null);}} onClose={()=>setModal(null)}/>
       </Modal>}
     </div>
   );
@@ -546,10 +582,10 @@ const Companies = ({data,ops,focusId,onClearFocus}) => {
         </div>
       </div>
       {filtered.map(c=>(
-        <div key={c.id} style={{...s.card,transition:"all 0.15s"}}
+        <div key={c.id} onClick={()=>setDetail(c.id)} style={{...s.card,cursor:"pointer",transition:"all 0.15s"}}
           onMouseEnter={e=>{e.currentTarget.style.borderColor=C.accent;e.currentTarget.style.boxShadow="0 2px 8px rgba(46,139,0,0.1)";}}
           onMouseLeave={e=>{e.currentTarget.style.borderColor=C.border;e.currentTarget.style.boxShadow="0 1px 4px rgba(0,0,0,0.06)";}}>
-          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:12,cursor:"pointer"}} onClick={()=>setDetail(c.id)}>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:12}}>
             <div style={{flex:1,minWidth:0}}>
               <div style={{fontWeight:700,fontSize:14,color:C.text,marginBottom:3}}>{c.name}</div>
               <div style={{fontSize:12,color:C.textMuted,display:"flex",gap:6,flexWrap:"wrap"}}>
@@ -564,27 +600,10 @@ const Companies = ({data,ops,focusId,onClearFocus}) => {
               <Icon d={Icons.chevronRight} size={14} stroke={C.textDim}/>
             </div>
           </div>
-          {/* Rychlé akce přímo ze seznamu */}
-          <div style={{display:"flex",gap:6,marginTop:10,paddingTop:10,borderTop:`1px solid ${C.border}`}} onClick={e=>e.stopPropagation()}>
-            <button onClick={()=>setQuickModal({type:"deal",companyId:c.id})} style={{...s.btn("ghost"),padding:"5px 10px",fontSize:11}}>
-              <Icon d={Icons.target} size={11}/>+ Deal
-            </button>
-            <button onClick={()=>setQuickModal({type:"task",companyId:c.id})} style={{...s.btn("ghost"),padding:"5px 10px",fontSize:11}}>
-              <Icon d={Icons.check} size={11}/>+ Úkol
-            </button>
-          </div>
         </div>
       ))}
       {filtered.length===0&&<div style={{textAlign:"center",padding:"40px 0",color:C.textDim}}>Žádné firmy</div>}
       {modal==="new"&&<Modal title="Nová firma" onClose={()=>setModal(null)}><CompanyForm onSave={async(f)=>{await ops.upsertCompany({...f,id:uid(),notes:[],created:today()});setModal(null);}} onClose={()=>setModal(null)}/></Modal>}
-      {quickModal?.type==="deal"&&<Modal title="Rychlý deal" onClose={()=>setQuickModal(null)}>
-        <DealForm initial={{title:"",company_id:quickModal.companyId,contact_id:"",type:"",qty:1,value:"",status:"Identifikováno",due_date:"",note:""}} companies={data.companies} contacts={data.contacts}
-          onSave={async(f)=>{await ops.upsertDeal({...f,id:uid(),qty:Number(f.qty)||1,value:Number(f.value)||0});setQuickModal(null);}} onClose={()=>setQuickModal(null)}/>
-      </Modal>}
-      {quickModal?.type==="task"&&<Modal title="Rychlý úkol" onClose={()=>setQuickModal(null)}>
-        <TaskForm initial={{title:"",type:"Telefonát",company_id:quickModal.companyId,contact_id:"",date:today(),status:"Plánováno",note:""}} companies={data.companies} contacts={data.contacts}
-          onSave={async(f)=>{await ops.upsertTask({...f,id:uid()});setQuickModal(null);}} onClose={()=>setQuickModal(null)}/>
-      </Modal>}
     </div>
   );
 };
@@ -593,10 +612,16 @@ const Companies = ({data,ops,focusId,onClearFocus}) => {
 const Contacts = ({data,ops,onNavigateToCompany}) => {
   const [modal,setModal] = useState(null);
   const [search,setSearch] = useState("");
-  const [taskModal,setTaskModal] = useState(null);
-  const [companyModal,setCompanyModal] = useState(null); // {company, contact}
   const contactNames = data.contacts.map(c=>c.name);
-  const filtered = data.contacts.filter(c=>c.name.toLowerCase().includes(search.toLowerCase())||(c.position||"").toLowerCase().includes(search.toLowerCase()));
+  const filtered = data.contacts.filter(c=>
+    c.name.toLowerCase().includes(search.toLowerCase())||(c.position||"").toLowerCase().includes(search.toLowerCase())
+  );
+
+  const handleContactClick = (ct) => {
+    if (ct.company_id) {
+      onNavigateToCompany(ct.company_id);
+    }
+  };
 
   return (
     <div>
@@ -611,14 +636,18 @@ const Contacts = ({data,ops,onNavigateToCompany}) => {
             <div key={ct.id} style={s.card}>
               <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:8}}>
                 <div>
-                  <div style={{fontWeight:700,fontSize:14,color:C.text}}>{ct.name}</div>
-                  <div style={{fontSize:12,color:C.textMuted,marginTop:2}}>{ct.position}</div>
-                  {/* Proklik na firmu */}
+                  {/* Klik na jméno → profil firmy */}
+                  <div onClick={()=>handleContactClick(ct)}
+                    style={{fontWeight:700,fontSize:14,color:ct.company_id?C.accent:C.text,cursor:ct.company_id?"pointer":"default",marginBottom:2}}>
+                    {ct.name}
+                  </div>
+                  <div style={{fontSize:12,color:C.textMuted}}>{ct.position}</div>
+                  {/* Klik na firmu → profil firmy */}
                   {company&&(
-                    <button onClick={()=>setCompanyModal({company,contact:ct})}
-                      style={{...s.btn("link"),marginTop:2,fontWeight:600,display:"flex",alignItems:"center",gap:3}}>
-                      <Icon d={Icons.building} size={11}/>{company.name}
-                    </button>
+                    <div onClick={()=>handleContactClick(ct)}
+                      style={{fontSize:11,color:C.accent,marginTop:2,cursor:"pointer",display:"flex",alignItems:"center",gap:3,fontWeight:500}}>
+                      <Icon d={Icons.building} size={10}/>{company.name}
+                    </div>
                   )}
                 </div>
                 <span style={s.badge(C.purple)}>{ct.role}</span>
@@ -631,7 +660,6 @@ const Contacts = ({data,ops,onNavigateToCompany}) => {
               {ct.personal_note&&<div style={{fontSize:12,color:"#92610a",background:C.yellowLight,padding:"6px 10px",borderRadius:6,border:`1px solid ${C.yellow}40`,marginBottom:6}}>😊 {ct.personal_note}</div>}
               {ct.note&&<div style={{fontSize:12,color:C.textDim,fontStyle:"italic",borderTop:`1px solid ${C.border}`,paddingTop:8,marginTop:4}}>"{ct.note}"</div>}
               <div style={{display:"flex",gap:6,marginTop:10}}>
-                <button onClick={()=>setTaskModal(ct)} style={{...s.btn("ghost"),padding:"5px 10px",fontSize:11}}><Icon d={Icons.check} size={11}/>+ Úkol</button>
                 <button onClick={()=>setModal(ct.id)} style={s.btn("ghost")}><Icon d={Icons.edit} size={12}/>Upravit</button>
                 <button onClick={()=>ops.deleteContact(ct.id)} style={s.btn("danger")}><Icon d={Icons.trash} size={12}/></button>
               </div>
@@ -640,71 +668,16 @@ const Contacts = ({data,ops,onNavigateToCompany}) => {
         })}
       </div>
       {filtered.length===0&&<div style={{textAlign:"center",padding:"40px 0",color:C.textDim}}>Žádné kontakty</div>}
-
       {modal&&<Modal title={modal==="new"?"Nový kontakt":"Upravit kontakt"} onClose={()=>setModal(null)}>
         <ContactForm initial={modal!=="new"?data.contacts.find(c=>c.id===modal):undefined} companies={data.companies}
           onSave={async(f)=>{await ops.upsertContact(modal==="new"?{...f,id:uid()}:{...data.contacts.find(c=>c.id===modal),...f});setModal(null);}}
           onClose={()=>setModal(null)}/>
       </Modal>}
-
-      {taskModal&&<Modal title={`Nový úkol – ${taskModal.name}`} onClose={()=>setTaskModal(null)}>
-        <TaskForm initial={{title:"",type:"Telefonát",company_id:taskModal.company_id||"",contact_id:taskModal.id,date:today(),status:"Plánováno",note:""}}
-          companies={data.companies} contacts={data.contacts}
-          onSave={async(f)=>{await ops.upsertTask({...f,id:uid()});setTaskModal(null);}} onClose={()=>setTaskModal(null)}/>
-      </Modal>}
-
-      {/* Rychlý přehled firmy z kontaktu + přidat poznámku/úkol */}
-      {companyModal&&(
-        <Modal title={companyModal.company.name} onClose={()=>setCompanyModal(null)}>
-          <div style={{marginBottom:16}}>
-            <div style={{display:"flex",gap:6,flexWrap:"wrap",alignItems:"center",marginBottom:8}}>
-              <StatusBadge status={companyModal.company.status}/>
-              {companyModal.company.industry&&<span style={{fontSize:12,color:C.textMuted}}>{companyModal.company.industry}</span>}
-              {companyModal.company.fleet>0&&<span style={{fontSize:12,color:C.textMuted}}>· {companyModal.company.fleet} VZV</span>}
-            </div>
-            {companyModal.company.address&&<div style={{fontSize:13,color:C.textMuted,marginBottom:4}}>{companyModal.company.address}</div>}
-            <button onClick={()=>{onNavigateToCompany(companyModal.company.id);setCompanyModal(null);}}
-              style={{...s.btn("ghost"),fontSize:12,marginTop:4}}>
-              <Icon d={Icons.externalLink} size={12}/>Otevřít celý profil firmy
-            </button>
-          </div>
-
-          <div style={{borderTop:`1px solid ${C.border}`,paddingTop:14,marginBottom:14}}>
-            <div style={{fontSize:12,fontWeight:700,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.5px",marginBottom:10}}>Přidat poznámku z terénu</div>
-            <QuickNoteInline company={companyModal.company} ops={ops}/>
-          </div>
-
-          <div style={{borderTop:`1px solid ${C.border}`,paddingTop:14}}>
-            <div style={{fontSize:12,fontWeight:700,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.5px",marginBottom:10}}>Přidat úkol</div>
-            <TaskForm
-              initial={{title:"",type:"Telefonát",company_id:companyModal.company.id,contact_id:companyModal.contact.id,date:today(),status:"Plánováno",note:""}}
-              companies={data.companies} contacts={data.contacts}
-              onSave={async(f)=>{await ops.upsertTask({...f,id:uid()});setCompanyModal(null);}}
-              onClose={()=>setCompanyModal(null)}/>
-          </div>
-        </Modal>
-      )}
     </div>
   );
 };
 
-// Pomocná komponenta pro rychlou poznámku uvnitř modalu
-const QuickNoteInline = ({company, ops}) => {
-  const [text, setText] = useState("");
-  const submit = async () => {
-    if (!text.trim()) return;
-    await ops.upsertCompany({...company, notes:[...(company.notes||[]),{text:text.trim(),date:today()}]});
-    setText("");
-  };
-  return (
-    <div style={{display:"flex",gap:8}}>
-      <Input value={text} onChange={e=>setText(e.target.value)} placeholder="Co se děje, co bylo řečeno…" onKeyDown={e=>e.key==="Enter"&&submit()}/>
-      <button onClick={submit} style={s.btn("primary")}><Icon d={Icons.plus} size={14}/></button>
-    </div>
-  );
-};
-
-// ── DEALS ──────────────────────────────────────────────────────────────────
+// ── DEALS ─────────────────────────────────────────────────────────────────
 const Deals = ({data,ops}) => {
   const [modal,setModal] = useState(null);
   const [filter,setFilter] = useState("Vše");
@@ -765,7 +738,7 @@ const Deals = ({data,ops}) => {
   );
 };
 
-// ── TASKS ──────────────────────────────────────────────────────────────────
+// ── TASKS ─────────────────────────────────────────────────────────────────
 const Tasks = ({data,ops}) => {
   const [modal,setModal] = useState(null);
   const [filter,setFilter] = useState("Aktivní");
@@ -777,6 +750,7 @@ const Tasks = ({data,ops}) => {
     if(filter==="Dokončeno") return t.status==="Dokončeno";
     return true;
   }).sort((a,b)=>(a.date||"").localeCompare(b.date||""));
+
   return (
     <div>
       <SectionHeader title="Úkoly" count={filtered.length} onAdd={()=>setModal("new")} addLabel="Přidat úkol"/>
@@ -793,28 +767,39 @@ const Tasks = ({data,ops}) => {
         const od=isOverdue(t.date,t.status);
         return (
           <div key={t.id} style={{...s.card,borderLeft:`3px solid ${od?C.danger:STATUS_COLORS[t.status]||C.border}`}}>
-            <div style={{display:"flex",gap:10,alignItems:"flex-start"}}>
-              <div style={{flex:1,minWidth:0}}>
-                <div style={{display:"flex",gap:6,alignItems:"center",flexWrap:"wrap",marginBottom:4}}>
-                  <span style={{fontWeight:700,fontSize:14,color:od?C.danger:C.text}}>{t.title}</span>
-                  <span style={s.badge(C.info)}>{t.type}</span>
-                  <StatusBadge status={t.status}/>
-                </div>
-                <div style={{fontSize:12,color:C.textMuted,display:"flex",gap:6,flexWrap:"wrap"}}>
-                  {company&&<span>{company.name}</span>}
-                  {contact&&<span>· {contact.name}</span>}
-                  <span style={{color:od?C.danger:C.textDim,fontWeight:od?600:400}}>· {fmtDate(t.date)}{od?" ⚠":""}</span>
-                </div>
-                {t.note&&<div style={{fontSize:12,color:C.textDim,marginTop:5,fontStyle:"italic"}}>{t.note}</div>}
-              </div>
-              <div style={{display:"flex",gap:5,flexShrink:0,flexWrap:"wrap",justifyContent:"flex-end"}}>
-                <a href={gcalLink(t,company,contact)} target="_blank" rel="noreferrer" style={{...s.btn("gcal"),textDecoration:"none",padding:"6px 10px",fontSize:12}}>
-                  <Icon d={Icons.gcal} size={13}/>GCal
-                </a>
-                {t.status!=="Dokončeno"&&<button onClick={()=>ops.upsertTask({...t,status:"Dokončeno"})} style={{...s.btn("ghost"),padding:"6px 10px"}} title="Hotovo"><Icon d={Icons.check} size={13}/></button>}
-                <button onClick={()=>setModal(t.id)} style={{...s.btn("ghost"),padding:"6px 10px"}}><Icon d={Icons.edit} size={13}/></button>
-                <button onClick={()=>ops.deleteTask(t.id)} style={{...s.btn("danger"),padding:"6px 10px"}}><Icon d={Icons.trash} size={13}/></button>
-              </div>
+            {/* Název, typ, stav */}
+            <div style={{display:"flex",gap:6,alignItems:"flex-start",flexWrap:"wrap",marginBottom:4}}>
+              <span style={{fontWeight:700,fontSize:14,color:od?C.danger:C.text,flex:1,minWidth:0}}>{t.title}</span>
+              <span style={s.badge(C.info)}>{t.type}</span>
+              <StatusBadge status={t.status}/>
+            </div>
+            {/* Firma, kontakt, datum+čas */}
+            <div style={{fontSize:12,color:C.textMuted,display:"flex",gap:6,flexWrap:"wrap",marginBottom:6}}>
+              {company&&<span>{company.name}</span>}
+              {contact&&<span>· {contact.name}</span>}
+              <span style={{color:od?C.danger:C.textDim,fontWeight:od?600:400}}>
+                · {fmtDate(t.date)}{t.time?` · ${t.time}`:""}{od?" ⚠":""}
+              </span>
+            </div>
+            {t.note&&<div style={{fontSize:12,color:C.textDim,marginBottom:8,fontStyle:"italic"}}>{t.note}</div>}
+            {/* Akční tlačítka POD textem — oprava pro mobil */}
+            <div style={{display:"flex",gap:6,flexWrap:"wrap",paddingTop:8,borderTop:`1px solid ${C.border}`}}>
+              <a href={gcalLink(t,company,contact)} target="_blank" rel="noreferrer"
+                style={{...s.btn("gcal"),textDecoration:"none",padding:"6px 10px",fontSize:12}}>
+                <Icon d={Icons.gcal} size={13}/>GCal
+              </a>
+              {t.status!=="Dokončeno"&&(
+                <button onClick={()=>ops.upsertTask({...t,status:"Dokončeno"})}
+                  style={{...s.btn("ghost"),padding:"6px 10px",fontSize:12}} title="Označit jako hotovo">
+                  <Icon d={Icons.check} size={13}/>Hotovo
+                </button>
+              )}
+              <button onClick={()=>setModal(t.id)} style={{...s.btn("ghost"),padding:"6px 10px",fontSize:12}}>
+                <Icon d={Icons.edit} size={13}/>Upravit
+              </button>
+              <button onClick={()=>ops.deleteTask(t.id)} style={{...s.btn("danger"),padding:"6px 10px",fontSize:12}}>
+                <Icon d={Icons.trash} size={13}/>
+              </button>
             </div>
           </div>
         );
@@ -829,7 +814,7 @@ const Tasks = ({data,ops}) => {
   );
 };
 
-// ── MAIN APP ───────────────────────────────────────────────────────────────
+// ── MAIN APP ──────────────────────────────────────────────────────────────
 const NAV = [
   {id:"dashboard",label:"Přehled",icon:Icons.chart},
   {id:"companies",label:"Firmy",icon:Icons.building},
