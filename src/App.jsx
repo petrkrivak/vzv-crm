@@ -58,6 +58,7 @@ const Icons = {
   search: ["M11 17a6 6 0 100-12 6 6 0 000 12z","M21 21l-4.35-4.35"],
   clock: ["M12 22a10 10 0 100-20 10 10 0 000 20z","M12 6v6l4 2"],
   gcal: ["M19 4H5a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2V6a2 2 0 00-2-2z","M16 2v4M8 2v4M3 10h18","M8 14h.01M12 14h.01M16 14h.01"],
+  calendar: ["M19 4H5a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2V6a2 2 0 00-2-2z","M16 2v4M8 2v4M3 10h18"],
 };
 
 const C = {
@@ -87,7 +88,6 @@ const COMPETITORS = ["Toyota","Linde","Jungheinrich","Still","Crown","Manitou","
 
 const uid = () => Math.random().toString(36).slice(2,9);
 const today = () => new Date().toISOString().split("T")[0];
-// Převede prázdné stringy na null před odesláním do databáze
 const clean = (obj) => Object.fromEntries(Object.entries(obj).map(([k,v])=>[k, v===""?null:v]));
 const fmtDate = (d) => d ? new Date(d).toLocaleDateString("cs-CZ",{day:"2-digit",month:"2-digit",year:"numeric"}) : "—";
 const fmtMoney = (n) => n ? new Intl.NumberFormat("cs-CZ",{style:"currency",currency:"CZK",maximumFractionDigits:0}).format(n) : "—";
@@ -122,6 +122,7 @@ const s = {
        v==="ghost"?{background:"transparent",color:C.textMuted,border:`1px solid ${C.border}`}:
        v==="danger"?{background:`${C.danger}10`,color:C.danger,border:`1px solid ${C.danger}30`}:
        v==="gcal"?{background:"#EEF4FF",color:C.info,border:`1px solid ${C.info}30`}:
+       v==="gcal-big"?{background:C.info,color:C.white,boxShadow:`0 2px 8px rgba(37,99,235,0.3)`,fontSize:14,padding:"12px 20px"}:
        {background:C.bg,color:C.text,border:`1px solid ${C.border}`}),
   }),
   label: { display:"block", fontSize:11, fontWeight:700, color:C.textMuted, marginBottom:5, letterSpacing:"0.6px", textTransform:"uppercase" },
@@ -177,11 +178,11 @@ const AutocompleteInput = ({ value, onChange, suggestions, placeholder }) => {
   );
 };
 
-const Modal = ({title,onClose,children}) => (
+const Modal = ({title,onClose,children,wide}) => (
   <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.4)",zIndex:1000,display:"flex",alignItems:"center",justifyContent:"center",padding:16}}
     onClick={e=>e.target===e.currentTarget&&onClose()}>
-    <div style={{background:C.white,border:`1px solid ${C.border}`,borderRadius:16,width:"100%",maxWidth:540,maxHeight:"90vh",overflow:"auto",padding:"24px 28px",boxShadow:"0 8px 32px rgba(0,0,0,0.12)"}}>
-      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:20}}>
+    <div style={{background:C.white,border:`1px solid ${C.border}`,borderRadius:16,width:"100%",maxWidth:wide?600:540,maxHeight:"92vh",overflow:"auto",padding:"20px 22px",boxShadow:"0 8px 32px rgba(0,0,0,0.12)"}}>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:18}}>
         <h2 style={{margin:0,fontSize:17,fontWeight:700,color:C.text}}>{title}</h2>
         <button onClick={onClose} style={{background:"none",border:"none",cursor:"pointer",color:C.textMuted,padding:4}}><Icon d={Icons.x} size={18}/></button>
       </div>
@@ -189,6 +190,34 @@ const Modal = ({title,onClose,children}) => (
     </div>
   </div>
 );
+
+// ── NOVINKA 1: GCal nabídka po uložení úkolu ──────────────────────────────
+const GCalPrompt = ({task, companies, contacts, onClose}) => {
+  const company = companies.find(c=>c.id===task.company_id);
+  const contact = contacts.find(c=>c.id===task.contact_id);
+  const link = gcalLink(task, company, contact);
+  return (
+    <div style={{textAlign:"center",padding:"8px 0"}}>
+      <div style={{width:56,height:56,borderRadius:"50%",background:"#EEF4FF",display:"flex",alignItems:"center",justifyContent:"center",margin:"0 auto 16px"}}>
+        <Icon d={Icons.calendar} size={28} stroke={C.info}/>
+      </div>
+      <h3 style={{margin:"0 0 8px",fontSize:18,fontWeight:800,color:C.text}}>Úkol uložen! 🎉</h3>
+      <p style={{margin:"0 0 20px",fontSize:14,color:C.textMuted,lineHeight:1.5}}>
+        Chceš přidat <strong>{task.title}</strong> do Google Kalendáře?
+        {task.date&&<><br/><span style={{fontSize:13,color:C.textDim}}>{fmtDate(task.date)}{task.time?` · ${task.time}`:""}</span></>}
+      </p>
+      <div style={{display:"flex",gap:10,justifyContent:"center",flexWrap:"wrap"}}>
+        <a href={link} target="_blank" rel="noreferrer" onClick={onClose}
+          style={{...s.btn("gcal-big"),textDecoration:"none"}}>
+          <Icon d={Icons.gcal} size={18}/>Přidat do Google Kalendáře
+        </a>
+        <button onClick={onClose} style={{...s.btn("ghost"),padding:"12px 20px",fontSize:14}}>
+          Přeskočit
+        </button>
+      </div>
+    </div>
+  );
+};
 
 const SyncBadge = ({status}) => {
   const cfg = { syncing:{color:C.warning,label:"Ukládám…"}, ok:{color:C.success,label:"Synchronizováno"}, error:{color:C.danger,label:"Chyba spojení"}, loading:{color:C.info,label:"Načítám…"} }[status]||{color:C.textDim,label:""};
@@ -253,35 +282,58 @@ const NoteEntry = ({notes=[],onAdd}) => {
 
 // ── FORMS ─────────────────────────────────────────────────────────────────
 
+// NOVINKA 2: TaskForm optimalizovaný pro mobil — single column, větší pole
 const TaskForm = ({initial,companies,contacts,onSave,onClose}) => {
   const [f,setF] = useState(initial||{title:"",type:"Telefonát",company_id:"",contact_id:"",date:today(),time:"",status:"Plánováno",note:""});
   const u = (k,v) => setF(p=>({...p,[k]:v}));
   const rc = f.company_id ? contacts.filter(c=>c.company_id===f.company_id) : contacts;
   return (
     <div>
-      <Field label="Název *"><Input value={f.title} onChange={e=>u("title",e.target.value)} placeholder="Telefonát ohledně nabídky"/></Field>
+      <Field label="Název *">
+        <Input value={f.title} onChange={e=>u("title",e.target.value)} placeholder="Telefonát ohledně nabídky"
+          style={{...s.input, fontSize:16, padding:"11px 14px"}}/>
+      </Field>
       <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
-        <Field label="Typ"><Select options={TASK_TYPES} value={f.type} onChange={e=>u("type",e.target.value)}/></Field>
-        <Field label="Stav"><Select options={STATUSES.task} value={f.status} onChange={e=>u("status",e.target.value)}/></Field>
-        <Field label="Datum"><Input type="date" value={f.date||""} onChange={e=>u("date",e.target.value)}/></Field>
-        <Field label="Čas (nepovinný)"><Input type="time" value={f.time||""} onChange={e=>u("time",e.target.value)}/></Field>
-        <Field label="Firma">
-          <select style={{...s.input,appearance:"none"}} value={f.company_id||""} onChange={e=>{u("company_id",e.target.value);u("contact_id","");}}>
-            <option value="">— bez firmy —</option>
-            {companies.map(c=><option key={c.id} value={c.id}>{c.name}</option>)}
+        <Field label="Typ">
+          <select style={{...s.input,appearance:"none",fontSize:16,padding:"11px 14px"}} value={f.type} onChange={e=>u("type",e.target.value)}>
+            {TASK_TYPES.map(o=><option key={o} value={o}>{o}</option>)}
           </select>
         </Field>
-        <Field label="Kontakt">
-          <select style={{...s.input,appearance:"none"}} value={f.contact_id||""} onChange={e=>u("contact_id",e.target.value)}>
-            <option value="">— bez kontaktu —</option>
-            {rc.map(c=><option key={c.id} value={c.id}>{c.name}</option>)}
+        <Field label="Stav">
+          <select style={{...s.input,appearance:"none",fontSize:16,padding:"11px 14px"}} value={f.status} onChange={e=>u("status",e.target.value)}>
+            {STATUSES.task.map(o=><option key={o} value={o}>{o}</option>)}
           </select>
+        </Field>
+        <Field label="Datum">
+          <Input type="date" value={f.date||""} onChange={e=>u("date",e.target.value)}
+            style={{...s.input,fontSize:16,padding:"11px 14px"}}/>
+        </Field>
+        <Field label="Čas">
+          <Input type="time" value={f.time||""} onChange={e=>u("time",e.target.value)}
+            style={{...s.input,fontSize:16,padding:"11px 14px"}}/>
         </Field>
       </div>
-      <Field label="Poznámka"><Textarea value={f.note||""} onChange={e=>u("note",e.target.value)}/></Field>
-      <div style={{display:"flex",justifyContent:"flex-end",gap:8}}>
-        <button onClick={onClose} style={s.btn("ghost")}>Zrušit</button>
-        <button onClick={()=>f.title&&onSave(f)} style={s.btn("primary")}>Uložit</button>
+      <Field label="Firma">
+        <select style={{...s.input,appearance:"none",fontSize:16,padding:"11px 14px"}} value={f.company_id||""} onChange={e=>{u("company_id",e.target.value);u("contact_id","");}}>
+          <option value="">— bez firmy —</option>
+          {companies.map(c=><option key={c.id} value={c.id}>{c.name}</option>)}
+        </select>
+      </Field>
+      <Field label="Kontakt">
+        <select style={{...s.input,appearance:"none",fontSize:16,padding:"11px 14px"}} value={f.contact_id||""} onChange={e=>u("contact_id",e.target.value)}>
+          <option value="">— bez kontaktu —</option>
+          {rc.map(c=><option key={c.id} value={c.id}>{c.name}</option>)}
+        </select>
+      </Field>
+      <Field label="Poznámka">
+        <textarea style={{...s.input,minHeight:80,resize:"vertical",fontSize:16,padding:"11px 14px"}}
+          value={f.note||""} onChange={e=>u("note",e.target.value)}/>
+      </Field>
+      <div style={{display:"flex",gap:10,marginTop:4}}>
+        <button onClick={onClose} style={{...s.btn("ghost"),flex:1,justifyContent:"center",padding:"12px"}}>Zrušit</button>
+        <button onClick={()=>f.title&&onSave(f)} style={{...s.btn("primary"),flex:2,justifyContent:"center",padding:"12px",fontSize:15}}>
+          Uložit úkol
+        </button>
       </div>
     </div>
   );
@@ -467,6 +519,7 @@ const Dashboard = ({data,onNavigate}) => {
 // ── COMPANIES ─────────────────────────────────────────────────────────────
 const Companies = ({data,ops,focusId,onClearFocus}) => {
   const [modal,setModal] = useState(null);
+  const [gcalTask,setGcalTask] = useState(null);
   const [search,setSearch] = useState("");
   const [filter,setFilter] = useState("Vše");
   const [detail,setDetail] = useState(focusId||null);
@@ -497,7 +550,6 @@ const Companies = ({data,ops,focusId,onClearFocus}) => {
           <button onClick={async()=>{await ops.deleteCompany(dc.id);setDetail(null);}} style={s.btn("danger")}><Icon d={Icons.trash} size={13}/></button>
         </div>
       </div>
-
       <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14,marginBottom:14}}>
         <div style={s.card}>
           <div style={{fontSize:11,fontWeight:700,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.5px",marginBottom:8}}>Info</div>
@@ -515,7 +567,6 @@ const Companies = ({data,ops,focusId,onClearFocus}) => {
           {data.deals.filter(d=>d.company_id===dc.id).length===0&&<div style={{fontSize:12,color:C.textDim}}>Žádné dealy</div>}
         </div>
       </div>
-
       <div style={s.card}>
         <div style={{fontSize:14,fontWeight:700,color:C.text,marginBottom:12}}>Kontaktní osoby</div>
         {data.contacts.filter(ct=>ct.company_id===dc.id).map(ct=>(
@@ -532,12 +583,10 @@ const Companies = ({data,ops,focusId,onClearFocus}) => {
         ))}
         {data.contacts.filter(ct=>ct.company_id===dc.id).length===0&&<div style={{fontSize:12,color:C.textDim}}>Žádné kontakty</div>}
       </div>
-
       <div style={s.card}>
         <div style={{fontSize:14,fontWeight:700,color:C.text,marginBottom:12}}>Poznámky z terénu</div>
         <NoteEntry notes={dc.notes||[]} onAdd={async(text)=>{await ops.upsertCompany({...dc,notes:[...(dc.notes||[]),{text,date:today()}]});}}/>
       </div>
-
       <div style={s.card}>
         <CardSectionHeader title="Úkoly" onAdd={()=>setModal("newTask")}/>
         {data.tasks.filter(t=>t.company_id===dc.id).map(t=>(
@@ -552,7 +601,6 @@ const Companies = ({data,ops,focusId,onClearFocus}) => {
         ))}
         {data.tasks.filter(t=>t.company_id===dc.id).length===0&&<div style={{fontSize:12,color:C.textDim}}>Žádné úkoly</div>}
       </div>
-
       {modal==="edit"&&<Modal title="Upravit firmu" onClose={()=>setModal(null)}><CompanyForm initial={dc} onSave={async(f)=>{await ops.upsertCompany({...dc,...f});setModal(null);}} onClose={()=>setModal(null)}/></Modal>}
       {modal==="newDeal"&&<Modal title="Nový deal" onClose={()=>setModal(null)}>
         <DealForm initial={{title:"",company_id:dc.id,contact_id:"",type:"",qty:1,value:"",status:"Identifikováno",due_date:"",note:""}} companies={data.companies} contacts={data.contacts}
@@ -560,7 +608,10 @@ const Companies = ({data,ops,focusId,onClearFocus}) => {
       </Modal>}
       {modal==="newTask"&&<Modal title="Nový úkol" onClose={()=>setModal(null)}>
         <TaskForm initial={{title:"",type:"Telefonát",company_id:dc.id,contact_id:"",date:today(),time:"",status:"Plánováno",note:""}} companies={data.companies} contacts={data.contacts}
-          onSave={async(f)=>{await ops.upsertTask({...clean(f),id:uid()});setModal(null);}} onClose={()=>setModal(null)}/>
+          onSave={async(f)=>{const saved={...clean(f),id:uid()};await ops.upsertTask(saved);setModal(null);setGcalTask(saved);}} onClose={()=>setModal(null)}/>
+      </Modal>}
+      {gcalTask&&<Modal title="" onClose={()=>setGcalTask(null)}>
+        <GCalPrompt task={gcalTask} companies={data.companies} contacts={data.contacts} onClose={()=>setGcalTask(null)}/>
       </Modal>}
     </div>
   );
@@ -613,11 +664,9 @@ const Contacts = ({data,ops,onNavigateToCompany}) => {
   const filtered = data.contacts.filter(c=>
     c.name.toLowerCase().includes(search.toLowerCase())||(c.position||"").toLowerCase().includes(search.toLowerCase())
   );
-
   const handleContactClick = (ct) => {
     if (ct.company_id) onNavigateToCompany(ct.company_id);
   };
-
   return (
     <div>
       <SectionHeader title="Kontakty" count={filtered.length} onAdd={()=>setModal("new")} addLabel="Přidat kontakt"/>
@@ -734,6 +783,7 @@ const Deals = ({data,ops}) => {
 // ── TASKS ─────────────────────────────────────────────────────────────────
 const Tasks = ({data,ops}) => {
   const [modal,setModal] = useState(null);
+  const [gcalTask,setGcalTask] = useState(null);
   const [filter,setFilter] = useState("Aktivní");
   const overdueCount = data.tasks.filter(t=>isOverdue(t.date,t.status)).length;
   const filtered = data.tasks.filter(t=>{
@@ -797,8 +847,17 @@ const Tasks = ({data,ops}) => {
       {filtered.length===0&&<div style={{textAlign:"center",padding:"40px 0",color:C.textDim}}>Žádné úkoly</div>}
       {modal&&<Modal title={modal==="new"?"Nový úkol":"Upravit úkol"} onClose={()=>setModal(null)}>
         <TaskForm initial={modal!=="new"?data.tasks.find(t=>t.id===modal):undefined} companies={data.companies} contacts={data.contacts}
-          onSave={async(f)=>{await ops.upsertTask(modal==="new"?{...clean(f),id:uid()}:{...data.tasks.find(t=>t.id===modal),...clean(f)});setModal(null);}}
+          onSave={async(f)=>{
+            const saved = modal==="new"?{...clean(f),id:uid()}:{...data.tasks.find(t=>t.id===modal),...clean(f)};
+            await ops.upsertTask(saved);
+            setModal(null);
+            // Po uložení nabídni GCal
+            if(modal==="new") setGcalTask(saved);
+          }}
           onClose={()=>setModal(null)}/>
+      </Modal>}
+      {gcalTask&&<Modal title="" onClose={()=>setGcalTask(null)}>
+        <GCalPrompt task={gcalTask} companies={data.companies} contacts={data.contacts} onClose={()=>setGcalTask(null)}/>
       </Modal>}
     </div>
   );
