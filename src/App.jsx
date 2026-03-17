@@ -62,70 +62,62 @@ const Icons = {
 };
 
 const C = {
-  bg: "#F4F5F7", surface: "#FFFFFF", surfaceHover: "#F0F8EC",
-  border: "#E2E4E9", borderLight: "#CBD0D8",
-  accent: "#2E8B00", accentDark: "#236D00", accentGlow:"rgba(46,139,0,0.1)", accentLight: "#F0F8EC",
-  yellow: "#F5B800", yellowLight: "#FFF8E1",
-  text: "#1A1A1A", textMuted: "#5C6070", textDim: "#9CA3AF",
-  success: "#16A34A", warning: "#D97706", danger: "#DC2626", info: "#2563EB", purple: "#7C3AED",
-  white: "#FFFFFF",
+  bg:"#F4F5F7",surface:"#FFFFFF",surfaceHover:"#F0F8EC",border:"#E2E4E9",borderLight:"#CBD0D8",
+  accent:"#2E8B00",accentDark:"#236D00",accentGlow:"rgba(46,139,0,0.1)",accentLight:"#F0F8EC",
+  yellow:"#F5B800",yellowLight:"#FFF8E1",text:"#1A1A1A",textMuted:"#5C6070",textDim:"#9CA3AF",
+  success:"#16A34A",warning:"#D97706",danger:"#DC2626",info:"#2563EB",purple:"#7C3AED",white:"#FFFFFF",
 };
 
 const STATUSES = {
-  company: ["Studený","Oslovený","Aktivní jednání","Zákazník","Spící"],
-  deal: ["Identifikováno","Nabídka odeslána","Jednání","Vyhráno","Prohráno"],
-  task: ["Plánováno","Probíhá","Dokončeno","Zrušeno"],
+  company:["Studený","Oslovený","Aktivní jednání","Zákazník","Spící"],
+  deal:["Identifikováno","Nabídka odeslána","Jednání","Vyhráno","Prohráno"],
+  task:["Plánováno","Probíhá","Dokončeno","Zrušeno"],
 };
 const STATUS_COLORS = {
   "Studený":C.textDim,"Oslovený":C.info,"Aktivní jednání":C.accent,"Zákazník":C.success,"Spící":C.purple,
   "Identifikováno":C.info,"Nabídka odeslána":C.warning,"Jednání":C.accent,"Vyhráno":C.success,"Prohráno":C.danger,
   "Plánováno":C.info,"Probíhá":C.warning,"Dokončeno":C.success,"Zrušeno":C.textDim,
 };
-const INDUSTRIES = ["Výroba","Logistika","Automotive","Stavebnictví","Zemědělství","Obchod","Jiné"];
-const TASK_TYPES = ["Telefonát","Návštěva","E-mail","Nabídka","Prezentace","Jiné"];
-const VZV_TYPES = ["Elektrický čelní","Elektrický CPD25","Dieselový","LPG","Retrák","Nízkozdvižný","Jiné"];
-const COMPETITORS = ["Toyota","Linde","Jungheinrich","Still","Crown","Manitou","Doosan","Jiný"];
+const INDUSTRIES=["Výroba","Logistika","Automotive","Stavebnictví","Zemědělství","Obchod","Jiné"];
+const TASK_TYPES=["Telefonát","Návštěva","E-mail","Nabídka","Prezentace","Jiné"];
+const VZV_TYPES=["Elektrický čelní","Elektrický CPD25","Dieselový","LPG","Retrák","Nízkozdvižný","Jiné"];
+const COMPETITORS=["Toyota","Linde","Jungheinrich","Still","Crown","Manitou","Doosan","Jiný"];
 
-const uid = () => Math.random().toString(36).slice(2,9);
-const today = () => new Date().toISOString().split("T")[0];
-const clean = (obj) => Object.fromEntries(Object.entries(obj).map(([k,v])=>[k, v===""?null:v]));
-const fmtDate = (d) => d ? new Date(d).toLocaleDateString("cs-CZ",{day:"2-digit",month:"2-digit",year:"numeric"}) : "—";
-const fmtMoney = (n) => n ? new Intl.NumberFormat("cs-CZ",{style:"currency",currency:"CZK",maximumFractionDigits:0}).format(n) : "—";
-const isOverdue = (date,status) => date && !["Dokončeno","Zrušeno","Vyhráno","Prohráno"].includes(status) && new Date(date) < new Date(today());
+const uid=()=>Math.random().toString(36).slice(2,9);
+const today=()=>new Date().toISOString().split("T")[0];
+const clean=(obj)=>Object.fromEntries(Object.entries(obj).map(([k,v])=>[k,v===""?null:v]));
+const fmtDate=(d)=>d?new Date(d).toLocaleDateString("cs-CZ",{day:"2-digit",month:"2-digit",year:"numeric"}):"—";
+const fmtMoney=(n)=>n?new Intl.NumberFormat("cs-CZ",{style:"currency",currency:"CZK",maximumFractionDigits:0}).format(n):"—";
+const isOverdue=(date,status)=>date&&!["Dokončeno","Zrušeno","Vyhráno","Prohráno"].includes(status)&&new Date(date)<new Date(today());
 
-const gcalLink = (task, company, contact) => {
-  const base = "https://calendar.google.com/calendar/render?action=TEMPLATE";
-  const title = encodeURIComponent(`[VZV] ${task.title}${company?" – "+company.name:""}`);
-  const details = encodeURIComponent(`Typ: ${task.type}\n${contact?"Kontakt: "+contact.name:""}\n${task.note||""}`);
-  const dateStr = task.date || today();
+const gcalLink=(task,company,contact)=>{
+  const base="https://calendar.google.com/calendar/render?action=TEMPLATE";
+  const title=encodeURIComponent(`[VZV] ${task.title}${company?" – "+company.name:""}`);
+  const details=encodeURIComponent(`Typ: ${task.type}\n${contact?"Kontakt: "+contact.name:""}\n${task.note||""}`);
+  const dateStr=task.date||today();
   let dates;
-  if (task.time) {
-    const start = `${dateStr.replace(/-/g,"")}T${task.time.replace(":","")}00`;
-    const [h,m] = task.time.split(":").map(Number);
-    const endH = String(h+1).padStart(2,"0");
-    const end = `${dateStr.replace(/-/g,"")}T${endH}${String(m).padStart(2,"0")}00`;
-    dates = `${start}/${end}`;
-  } else {
-    const d = dateStr.replace(/-/g,"");
-    dates = `${d}/${d}`;
-  }
+  if(task.time){
+    const start=`${dateStr.replace(/-/g,"")}T${task.time.replace(":","")}00`;
+    const [h,m]=task.time.split(":").map(Number);
+    const endH=String(h+1).padStart(2,"0");
+    const end=`${dateStr.replace(/-/g,"")}T${endH}${String(m).padStart(2,"0")}00`;
+    dates=`${start}/${end}`;
+  } else { const d=dateStr.replace(/-/g,""); dates=`${d}/${d}`; }
   return `${base}&text=${title}&dates=${dates}&details=${details}`;
 };
 
-// Kompaktní vstupní styl — fontSize 16px (no iOS zoom), padding menší
-const inp = {
-  width:"100%", background:C.white, border:`1px solid ${C.border}`,
-  borderRadius:8, padding:"8px 12px", color:C.text, fontSize:16,
-  outline:"none", boxSizing:"border-box", transition:"border-color 0.15s",
-  WebkitAppearance:"none", appearance:"none", lineHeight:1.4,
+const inp={
+  width:"100%",background:C.white,border:`1px solid ${C.border}`,borderRadius:8,
+  padding:"8px 12px",color:C.text,fontSize:16,outline:"none",boxSizing:"border-box",
+  transition:"border-color 0.15s",WebkitAppearance:"none",appearance:"none",lineHeight:1.4,
 };
 
-const s = {
-  badge: (color) => ({ display:"inline-block", padding:"3px 10px", borderRadius:20, fontSize:11, fontWeight:600, background:`${color}18`, color, border:`1px solid ${color}33`, letterSpacing:"0.3px", whiteSpace:"nowrap" }),
-  card: { background:C.white, border:`1px solid ${C.border}`, borderRadius:12, padding:"18px 22px", marginBottom:12, boxShadow:"0 1px 4px rgba(0,0,0,0.06)" },
-  input: inp,
-  btn: (v="primary") => ({
-    display:"inline-flex", alignItems:"center", gap:6, padding:"8px 16px", borderRadius:8, border:"none", cursor:"pointer", fontSize:13, fontWeight:600, transition:"all 0.15s",
+const s={
+  badge:(color)=>({display:"inline-block",padding:"3px 10px",borderRadius:20,fontSize:11,fontWeight:600,background:`${color}18`,color,border:`1px solid ${color}33`,letterSpacing:"0.3px",whiteSpace:"nowrap"}),
+  card:{background:C.white,border:`1px solid ${C.border}`,borderRadius:12,padding:"18px 22px",marginBottom:12,boxShadow:"0 1px 4px rgba(0,0,0,0.06)"},
+  input:inp,
+  btn:(v="primary")=>({
+    display:"inline-flex",alignItems:"center",gap:6,padding:"8px 16px",borderRadius:8,border:"none",cursor:"pointer",fontSize:13,fontWeight:600,transition:"all 0.15s",
     ...(v==="primary"?{background:C.accent,color:C.white,boxShadow:`0 2px 8px ${C.accentGlow}`}:
        v==="ghost"?{background:"transparent",color:C.textMuted,border:`1px solid ${C.border}`}:
        v==="danger"?{background:`${C.danger}10`,color:C.danger,border:`1px solid ${C.danger}30`}:
@@ -133,62 +125,49 @@ const s = {
        v==="gcal-big"?{background:C.info,color:C.white,boxShadow:`0 2px 8px rgba(37,99,235,0.3)`,fontSize:15,padding:"13px 20px"}:
        {background:C.bg,color:C.text,border:`1px solid ${C.border}`}),
   }),
-  label: { display:"block", fontSize:11, fontWeight:700, color:C.textMuted, marginBottom:4, letterSpacing:"0.5px", textTransform:"uppercase" },
+  label:{display:"block",fontSize:11,fontWeight:700,color:C.textMuted,marginBottom:4,letterSpacing:"0.5px",textTransform:"uppercase"},
 };
 
-const StatusBadge = ({status}) => <span style={s.badge(STATUS_COLORS[status]||C.textMuted)}>{status}</span>;
-
-// Kompaktní Field — méně mezery mezi poli
-const Field = ({label,children}) => (
-  <div style={{marginBottom:10}}>
-    <label style={s.label}>{label}</label>
-    {children}
-  </div>
-);
-
-const Input = (props) => <input style={inp} {...props}/>;
-const Textarea = (props) => <textarea style={{...inp,minHeight:72,resize:"vertical"}} {...props}/>;
-const Sel = ({options, withEmpty, emptyLabel, ...props}) => (
+const StatusBadge=({status})=><span style={s.badge(STATUS_COLORS[status]||C.textMuted)}>{status}</span>;
+const Field=({label,children})=><div style={{marginBottom:10}}><label style={s.label}>{label}</label>{children}</div>;
+const Input=(props)=><input style={inp} {...props}/>;
+const Textarea=(props)=><textarea style={{...inp,minHeight:72,resize:"vertical"}} {...props}/>;
+const Sel=({options,withEmpty,emptyLabel,...props})=>(
   <select style={inp} {...props}>
-    {withEmpty && <option value="">{emptyLabel||"— vyberte —"}</option>}
-    {options.map(o => typeof o==="string"
-      ? <option key={o} value={o}>{o}</option>
-      : <option key={o.id} value={o.id}>{o.name}</option>
-    )}
+    {withEmpty&&<option value="">{emptyLabel||"— vyberte —"}</option>}
+    {options.map(o=>typeof o==="string"?<option key={o} value={o}>{o}</option>:<option key={o.id} value={o.id}>{o.name}</option>)}
   </select>
 );
 
-const AutocompleteInput = ({ value, onChange, suggestions, placeholder }) => {
-  const [open, setOpen] = useState(false);
-  const [filtered, setFiltered] = useState([]);
-  const ref = useRef(null);
-  useEffect(() => {
-    const handler = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
-  }, []);
-  const handleChange = (v) => {
+const AutocompleteInput=({value,onChange,suggestions,placeholder})=>{
+  const [open,setOpen]=useState(false);
+  const [filtered,setFiltered]=useState([]);
+  const ref=useRef(null);
+  useEffect(()=>{
+    const handler=(e)=>{if(ref.current&&!ref.current.contains(e.target))setOpen(false);};
+    document.addEventListener("mousedown",handler);
+    return()=>document.removeEventListener("mousedown",handler);
+  },[]);
+  const handleChange=(v)=>{
     onChange(v);
-    const f = suggestions.filter(s => s.toLowerCase().includes(v.toLowerCase()));
+    const f=suggestions.filter(s=>s.toLowerCase().includes(v.toLowerCase()));
     setFiltered(f);
-    setOpen(v.length > 0 && f.length > 0);
+    setOpen(v.length>0&&f.length>0);
   };
   return (
-    <div ref={ref} style={{ position: "relative" }}>
-      <div style={{ position:"absolute", left:10, top:"50%", transform:"translateY(-50%)", color:C.textDim, pointerEvents:"none" }}>
-        <Icon d={Icons.search} size={14} />
-      </div>
-      <input style={{ ...inp, paddingLeft:34 }} value={value}
-        onChange={e => handleChange(e.target.value)}
-        onFocus={() => { if (value.length === 0) { setFiltered(suggestions); setOpen(suggestions.length > 0); } }}
+    <div ref={ref} style={{position:"relative"}}>
+      <div style={{position:"absolute",left:10,top:"50%",transform:"translateY(-50%)",color:C.textDim,pointerEvents:"none"}}><Icon d={Icons.search} size={14}/></div>
+      <input style={{...inp,paddingLeft:34}} value={value}
+        onChange={e=>handleChange(e.target.value)}
+        onFocus={()=>{if(value.length===0){setFiltered(suggestions);setOpen(suggestions.length>0);}}}
         placeholder={placeholder}/>
-      {open && (
-        <div style={{ position:"absolute", top:"100%", left:0, right:0, zIndex:200, background:C.white, border:`1px solid ${C.border}`, borderRadius:8, boxShadow:"0 4px 16px rgba(0,0,0,0.12)", maxHeight:220, overflow:"auto", marginTop:2 }}>
-          {filtered.map((item, i) => (
-            <div key={i} onMouseDown={() => { onChange(item); setOpen(false); }}
-              style={{ padding:"10px 14px", cursor:"pointer", fontSize:15, color:C.text, borderBottom: i < filtered.length-1 ? `1px solid ${C.border}` : "none" }}
-              onMouseEnter={e => e.currentTarget.style.background = C.accentLight}
-              onMouseLeave={e => e.currentTarget.style.background = "transparent"}
+      {open&&(
+        <div style={{position:"absolute",top:"100%",left:0,right:0,zIndex:200,background:C.white,border:`1px solid ${C.border}`,borderRadius:8,boxShadow:"0 4px 16px rgba(0,0,0,0.12)",maxHeight:220,overflow:"auto",marginTop:2}}>
+          {filtered.map((item,i)=>(
+            <div key={i} onMouseDown={()=>{onChange(item);setOpen(false);}}
+              style={{padding:"10px 14px",cursor:"pointer",fontSize:15,color:C.text,borderBottom:i<filtered.length-1?`1px solid ${C.border}`:"none"}}
+              onMouseEnter={e=>e.currentTarget.style.background=C.accentLight}
+              onMouseLeave={e=>e.currentTarget.style.background="transparent"}
             >{item}</div>
           ))}
         </div>
@@ -197,12 +176,10 @@ const AutocompleteInput = ({ value, onChange, suggestions, placeholder }) => {
   );
 };
 
-// Modal jako bottom sheet — scrollovatelný obsah, sticky tlačítka dole
-const Modal = ({title, onClose, children, onSave, saveLabel="Uložit", saveDisabled}) => (
+const Modal=({title,onClose,children,onSave,saveLabel="Uložit",saveDisabled})=>(
   <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.5)",zIndex:1000,display:"flex",alignItems:"flex-end",justifyContent:"center"}}
     onClick={e=>e.target===e.currentTarget&&onClose()}>
     <div style={{background:C.white,borderRadius:"20px 20px 0 0",width:"100%",maxWidth:600,maxHeight:"92vh",display:"flex",flexDirection:"column",boxShadow:"0 -4px 32px rgba(0,0,0,0.15)"}}>
-      {/* Handle + header — fixní nahoře */}
       <div style={{padding:"12px 20px 0",flexShrink:0}}>
         <div style={{width:40,height:4,borderRadius:2,background:C.border,margin:"0 auto 12px"}}/>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14,paddingBottom:12,borderBottom:`1px solid ${C.border}`}}>
@@ -210,31 +187,27 @@ const Modal = ({title, onClose, children, onSave, saveLabel="Uložit", saveDisab
           <button onClick={onClose} style={{background:"none",border:"none",cursor:"pointer",color:C.textMuted,padding:4}}><Icon d={Icons.x} size={20}/></button>
         </div>
       </div>
-      {/* Scrollovatelný obsah */}
       <div style={{flex:1,overflow:"auto",padding:"0 20px"}}>
         {children}
-        {/* Spacer aby poslední pole nebylo schované za sticky tlačítky */}
         <div style={{height:16}}/>
       </div>
-      {/* Sticky tlačítka — vždy viditelná dole */}
-      {onSave && (
+      {onSave&&(
         <div style={{padding:"12px 20px 24px",borderTop:`1px solid ${C.border}`,background:C.white,flexShrink:0,display:"flex",gap:10}}>
           <button onClick={onClose} style={{...s.btn("ghost"),flex:1,justifyContent:"center",padding:"13px",fontSize:15}}>Zrušit</button>
           <button onClick={onSave} disabled={saveDisabled} style={{...s.btn("primary"),flex:2,justifyContent:"center",padding:"13px",fontSize:15,opacity:saveDisabled?0.5:1}}>{saveLabel}</button>
         </div>
       )}
-      {!onSave && <div style={{height:20,flexShrink:0}}/>}
+      {!onSave&&<div style={{height:20,flexShrink:0}}/>}
     </div>
   </div>
 );
 
-// GCal nabídka po uložení
-const GCalPrompt = ({task, companies, contacts, onClose}) => {
-  const company = companies.find(c=>c.id===task.company_id);
-  const contact = contacts.find(c=>c.id===task.contact_id);
-  const link = gcalLink(task, company, contact);
+const GCalPrompt=({task,companies,contacts,onClose})=>{
+  const company=companies.find(c=>c.id===task.company_id);
+  const contact=contacts.find(c=>c.id===task.contact_id);
+  const link=gcalLink(task,company,contact);
   return (
-    <div style={{textAlign:"center",padding:"8px 0 8px"}}>
+    <div style={{textAlign:"center",padding:"8px 0"}}>
       <div style={{width:64,height:64,borderRadius:"50%",background:"#EEF4FF",display:"flex",alignItems:"center",justifyContent:"center",margin:"0 auto 16px"}}>
         <Icon d={Icons.calendar} size={32} stroke={C.info}/>
       </div>
@@ -248,24 +221,18 @@ const GCalPrompt = ({task, companies, contacts, onClose}) => {
           style={{...s.btn("gcal-big"),textDecoration:"none",justifyContent:"center",width:"100%",boxSizing:"border-box"}}>
           <Icon d={Icons.gcal} size={18}/>Přidat do Google Kalendáře
         </a>
-        <button onClick={onClose} style={{...s.btn("ghost"),justifyContent:"center",padding:"13px",fontSize:15}}>
-          Přeskočit
-        </button>
+        <button onClick={onClose} style={{...s.btn("ghost"),justifyContent:"center",padding:"13px",fontSize:15}}>Přeskočit</button>
       </div>
     </div>
   );
 };
 
-const SyncBadge = ({status}) => {
-  const cfg = { syncing:{color:C.warning,label:"Ukládám…"}, ok:{color:C.success,label:"Synchronizováno"}, error:{color:C.danger,label:"Chyba spojení"}, loading:{color:C.info,label:"Načítám…"} }[status]||{color:C.textDim,label:""};
-  return (
-    <div style={{display:"flex",alignItems:"center",gap:5,fontSize:11,color:cfg.color,fontWeight:500}}>
-      <div style={{width:6,height:6,borderRadius:3,background:cfg.color}}/>{cfg.label}
-    </div>
-  );
+const SyncBadge=({status})=>{
+  const cfg={syncing:{color:C.warning,label:"Ukládám…"},ok:{color:C.success,label:"Synchronizováno"},error:{color:C.danger,label:"Chyba spojení"},loading:{color:C.info,label:"Načítám…"}}[status]||{color:C.textDim,label:""};
+  return <div style={{display:"flex",alignItems:"center",gap:5,fontSize:11,color:cfg.color,fontWeight:500}}><div style={{width:6,height:6,borderRadius:3,background:cfg.color}}/>{cfg.label}</div>;
 };
 
-const SectionHeader = ({title,count,onAdd,addLabel="Přidat"}) => (
+const SectionHeader=({title,count,onAdd,addLabel="Přidat"})=>(
   <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:18}}>
     <div style={{display:"flex",gap:8,alignItems:"center"}}>
       <h2 style={{margin:0,fontSize:20,fontWeight:700,color:C.text}}>{title}</h2>
@@ -275,31 +242,30 @@ const SectionHeader = ({title,count,onAdd,addLabel="Přidat"}) => (
   </div>
 );
 
-const AddButton = ({onClick, title}) => (
-  <button onClick={onClick} title={title} style={{
-    display:"inline-flex", alignItems:"center", justifyContent:"center",
-    width:30, height:30, borderRadius:"50%",
-    border:`2px solid ${C.accent}`, background:C.accentLight,
-    color:C.accent, cursor:"pointer", flexShrink:0,
-    transition:"all 0.15s", padding:0,
-  }}
+const AddButton=({onClick})=>(
+  <button onClick={onClick} style={{display:"inline-flex",alignItems:"center",justifyContent:"center",width:30,height:30,borderRadius:"50%",border:`2px solid ${C.accent}`,background:C.accentLight,color:C.accent,cursor:"pointer",flexShrink:0,transition:"all 0.15s",padding:0}}
     onMouseEnter={e=>{e.currentTarget.style.background=C.accent;e.currentTarget.style.color=C.white;}}
-    onMouseLeave={e=>{e.currentTarget.style.background=C.accentLight;e.currentTarget.style.color=C.accent;}}
-  >
+    onMouseLeave={e=>{e.currentTarget.style.background=C.accentLight;e.currentTarget.style.color=C.accent;}}>
     <Icon d={Icons.plus} size={14}/>
   </button>
 );
 
-const CardSectionHeader = ({title, onAdd}) => (
+const CardSectionHeader=({title,onAdd})=>(
   <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
     <div style={{fontSize:14,fontWeight:700,color:C.text}}>{title}</div>
     {onAdd&&<AddButton onClick={onAdd}/>}
   </div>
 );
 
-const NoteEntry = ({notes=[],onAdd}) => {
-  const [text,setText] = useState("");
-  const submit = () => { if(text.trim()){onAdd(text.trim());setText("");} };
+// Poznámky z terénu s úpravou a smazáním
+const NoteEntry=({notes=[],onAdd,onEdit,onDelete})=>{
+  const [text,setText]=useState("");
+  const [editIdx,setEditIdx]=useState(null);
+  const [editText,setEditText]=useState("");
+  const submit=()=>{if(text.trim()){onAdd(text.trim());setText("");}};
+  const startEdit=(i,t)=>{setEditIdx(i);setEditText(t);};
+  const saveEdit=(i)=>{if(editText.trim())onEdit(i,editText.trim());setEditIdx(null);};
+  const reversedNotes=[...notes].map((n,i)=>({...n,origIdx:i})).reverse();
   return (
     <div>
       <div style={{display:"flex",gap:8}}>
@@ -307,13 +273,33 @@ const NoteEntry = ({notes=[],onAdd}) => {
         <AddButton onClick={submit}/>
       </div>
       <div style={{marginTop:12}}>
-        {[...notes].reverse().map((n,i)=>(
-          <div key={i} style={{display:"flex",gap:10,padding:"10px 0",borderBottom:`1px solid ${C.border}`}}>
-            <div style={{width:6,height:6,borderRadius:3,background:C.accent,marginTop:5,flexShrink:0}}/>
-            <div>
-              <div style={{fontSize:13,color:C.text}}>{n.text}</div>
-              <div style={{fontSize:11,color:C.textDim,marginTop:2}}>{fmtDate(n.date)}</div>
-            </div>
+        {reversedNotes.map((n)=>(
+          <div key={n.origIdx} style={{padding:"10px 0",borderBottom:`1px solid ${C.border}`}}>
+            {editIdx===n.origIdx?(
+              <div>
+                <textarea style={{...inp,minHeight:60,resize:"vertical",marginBottom:8}} value={editText} onChange={e=>setEditText(e.target.value)} autoFocus/>
+                <div style={{display:"flex",gap:6}}>
+                  <button onClick={()=>saveEdit(n.origIdx)} style={{...s.btn("primary"),padding:"5px 12px",fontSize:12}}><Icon d={Icons.check} size={12}/>Uložit</button>
+                  <button onClick={()=>setEditIdx(null)} style={{...s.btn("ghost"),padding:"5px 12px",fontSize:12}}>Zrušit</button>
+                </div>
+              </div>
+            ):(
+              <div style={{display:"flex",gap:10,alignItems:"flex-start"}}>
+                <div style={{width:6,height:6,borderRadius:3,background:C.accent,marginTop:5,flexShrink:0}}/>
+                <div style={{flex:1}}>
+                  <div style={{fontSize:13,color:C.text,lineHeight:1.5}}>{n.text}</div>
+                  <div style={{fontSize:11,color:C.textDim,marginTop:2}}>{fmtDate(n.date)}</div>
+                </div>
+                <div style={{display:"flex",gap:4,flexShrink:0}}>
+                  <button onClick={()=>startEdit(n.origIdx,n.text)} style={{background:"none",border:"none",cursor:"pointer",color:C.textDim,padding:"2px 4px",borderRadius:4}}
+                    onMouseEnter={e=>e.currentTarget.style.color=C.accent}
+                    onMouseLeave={e=>e.currentTarget.style.color=C.textDim}><Icon d={Icons.edit} size={13}/></button>
+                  <button onClick={()=>onDelete(n.origIdx)} style={{background:"none",border:"none",cursor:"pointer",color:C.textDim,padding:"2px 4px",borderRadius:4}}
+                    onMouseEnter={e=>e.currentTarget.style.color=C.danger}
+                    onMouseLeave={e=>e.currentTarget.style.color=C.textDim}><Icon d={Icons.trash} size={13}/></button>
+                </div>
+              </div>
+            )}
           </div>
         ))}
         {notes.length===0&&<div style={{color:C.textDim,fontSize:13,textAlign:"center",padding:"14px 0"}}>Zatím žádné poznámky</div>}
@@ -322,73 +308,44 @@ const NoteEntry = ({notes=[],onAdd}) => {
   );
 };
 
-// ── FORMS ─────────────────────────────────────────────────────────────────
-// Formuláře bez vlastních tlačítek — tlačítka jsou v Modal sticky footer
-
-const TaskFormFields = ({f, u, companies, contacts}) => {
-  const rc = f.company_id ? contacts.filter(c=>c.company_id===f.company_id) : contacts;
+const TaskFormFields=({f,u,companies,contacts})=>{
+  const rc=f.company_id?contacts.filter(c=>c.company_id===f.company_id):contacts;
   return (
     <div>
-      <Field label="Název *">
-        <Input value={f.title} onChange={e=>u("title",e.target.value)} placeholder="Telefonát ohledně nabídky"/>
-      </Field>
-      <Field label="Typ">
-        <Sel options={TASK_TYPES} value={f.type} onChange={e=>u("type",e.target.value)}/>
-      </Field>
+      <Field label="Název *"><Input value={f.title} onChange={e=>u("title",e.target.value)} placeholder="Telefonát ohledně nabídky"/></Field>
+      <Field label="Typ"><Sel options={TASK_TYPES} value={f.type} onChange={e=>u("type",e.target.value)}/></Field>
       <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
         <Field label="Datum"><Input type="date" value={f.date||""} onChange={e=>u("date",e.target.value)}/></Field>
         <Field label="Čas"><Input type="time" value={f.time||""} onChange={e=>u("time",e.target.value)}/></Field>
       </div>
-      <Field label="Firma">
-        <Sel options={companies} withEmpty emptyLabel="— bez firmy —" value={f.company_id||""} onChange={e=>{u("company_id",e.target.value);u("contact_id","");}}/>
-      </Field>
-      <Field label="Kontakt">
-        <Sel options={rc} withEmpty emptyLabel="— bez kontaktu —" value={f.contact_id||""} onChange={e=>u("contact_id",e.target.value)}/>
-      </Field>
-      <Field label="Stav">
-        <Sel options={STATUSES.task} value={f.status} onChange={e=>u("status",e.target.value)}/>
-      </Field>
-      <Field label="Poznámka">
-        <Textarea value={f.note||""} onChange={e=>u("note",e.target.value)}/>
-      </Field>
+      <Field label="Firma"><Sel options={companies} withEmpty emptyLabel="— bez firmy —" value={f.company_id||""} onChange={e=>{u("company_id",e.target.value);u("contact_id","");}}/></Field>
+      <Field label="Kontakt"><Sel options={rc} withEmpty emptyLabel="— bez kontaktu —" value={f.contact_id||""} onChange={e=>u("contact_id",e.target.value)}/></Field>
+      <Field label="Stav"><Sel options={STATUSES.task} value={f.status} onChange={e=>u("status",e.target.value)}/></Field>
+      <Field label="Poznámka"><Textarea value={f.note||""} onChange={e=>u("note",e.target.value)}/></Field>
     </div>
   );
 };
 
-const DealFormFields = ({f, u, companies, contacts}) => {
-  const rc = contacts.filter(c=>c.company_id===f.company_id);
+const DealFormFields=({f,u,companies,contacts})=>{
+  const rc=contacts.filter(c=>c.company_id===f.company_id);
   return (
     <div>
-      <Field label="Název *">
-        <Input value={f.title} onChange={e=>u("title",e.target.value)} placeholder="2x HC CPD25"/>
-      </Field>
-      <Field label="Firma">
-        <Sel options={companies} withEmpty emptyLabel="— vyberte —" value={f.company_id||""} onChange={e=>{u("company_id",e.target.value);u("contact_id","");}}/>
-      </Field>
-      <Field label="Kontakt">
-        <Sel options={rc} withEmpty emptyLabel="— vyberte —" value={f.contact_id||""} onChange={e=>u("contact_id",e.target.value)}/>
-      </Field>
-      <Field label="Typ VZV">
-        <Sel options={VZV_TYPES} withEmpty emptyLabel="— vyberte —" value={f.type||""} onChange={e=>u("type",e.target.value)}/>
-      </Field>
+      <Field label="Název *"><Input value={f.title} onChange={e=>u("title",e.target.value)} placeholder="2x HC CPD25"/></Field>
+      <Field label="Firma"><Sel options={companies} withEmpty emptyLabel="— vyberte —" value={f.company_id||""} onChange={e=>{u("company_id",e.target.value);u("contact_id","");}}/></Field>
+      <Field label="Kontakt"><Sel options={rc} withEmpty emptyLabel="— vyberte —" value={f.contact_id||""} onChange={e=>u("contact_id",e.target.value)}/></Field>
+      <Field label="Typ VZV"><Sel options={VZV_TYPES} withEmpty emptyLabel="— vyberte —" value={f.type||""} onChange={e=>u("type",e.target.value)}/></Field>
       <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
         <Field label="Počet ks"><Input type="number" value={f.qty||1} onChange={e=>u("qty",e.target.value)} min={1}/></Field>
         <Field label="Hodnota (Kč)"><Input type="number" value={f.value||""} onChange={e=>u("value",e.target.value)} placeholder="0"/></Field>
       </div>
-      <Field label="Stav">
-        <Sel options={STATUSES.deal} value={f.status} onChange={e=>u("status",e.target.value)}/>
-      </Field>
-      <Field label="Datum followupu">
-        <Input type="date" value={f.due_date||""} onChange={e=>u("due_date",e.target.value)}/>
-      </Field>
-      <Field label="Poznámka">
-        <Textarea value={f.note||""} onChange={e=>u("note",e.target.value)}/>
-      </Field>
+      <Field label="Stav"><Sel options={STATUSES.deal} value={f.status} onChange={e=>u("status",e.target.value)}/></Field>
+      <Field label="Datum followupu"><Input type="date" value={f.due_date||""} onChange={e=>u("due_date",e.target.value)}/></Field>
+      <Field label="Poznámka"><Textarea value={f.note||""} onChange={e=>u("note",e.target.value)}/></Field>
     </div>
   );
 };
 
-const CompanyFormFields = ({f, u}) => (
+const CompanyFormFields=({f,u})=>(
   <div>
     <Field label="Název *"><Input value={f.name} onChange={e=>u("name",e.target.value)} placeholder="Firma s.r.o."/></Field>
     <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
@@ -402,12 +359,10 @@ const CompanyFormFields = ({f, u}) => (
   </div>
 );
 
-const ContactFormFields = ({f, u, companies}) => (
+const ContactFormFields=({f,u,companies})=>(
   <div>
     <Field label="Jméno *"><Input value={f.name} onChange={e=>u("name",e.target.value)}/></Field>
-    <Field label="Firma">
-      <Sel options={companies} withEmpty emptyLabel="— bez firmy —" value={f.company_id||""} onChange={e=>u("company_id",e.target.value)}/>
-    </Field>
+    <Field label="Firma"><Sel options={companies} withEmpty emptyLabel="— bez firmy —" value={f.company_id||""} onChange={e=>u("company_id",e.target.value)}/></Field>
     <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
       <Field label="Pozice"><Input value={f.position||""} onChange={e=>u("position",e.target.value)}/></Field>
       <Field label="Role"><Sel options={["Rozhodovatel","Influencer","Uživatel","Blokátor"]} value={f.role||""} onChange={e=>u("role",e.target.value)}/></Field>
@@ -418,66 +373,42 @@ const ContactFormFields = ({f, u, companies}) => (
     </div>
     <Field label="LinkedIn"><Input value={f.linkedin||""} onChange={e=>u("linkedin",e.target.value)}/></Field>
     <Field label="Poznámka (obchodní)"><Textarea value={f.note||""} onChange={e=>u("note",e.target.value)}/></Field>
-    <Field label="😊 Osobní poznámky">
-      <Textarea value={f.personal_note||""} onChange={e=>u("personal_note",e.target.value)} placeholder="Záliby, charakter…"/>
-    </Field>
+    <Field label="Osobní poznámky"><Textarea value={f.personal_note||""} onChange={e=>u("personal_note",e.target.value)} placeholder="Záliby, charakter…"/></Field>
   </div>
 );
 
-// Wrapper komponenty které drží state formuláře
-const TaskModal = ({initial, companies, contacts, onSave, onClose}) => {
-  const [f,setF] = useState(initial||{title:"",type:"Telefonát",company_id:"",contact_id:"",date:today(),time:"",status:"Plánováno",note:""});
-  const u = (k,v) => setF(p=>({...p,[k]:v}));
-  return (
-    <Modal title={initial?.id?"Upravit úkol":"Nový úkol"} onClose={onClose}
-      onSave={()=>f.title&&onSave(f)} saveLabel="Uložit úkol" saveDisabled={!f.title}>
-      <TaskFormFields f={f} u={u} companies={companies} contacts={contacts}/>
-    </Modal>
-  );
+const TaskModal=({initial,companies,contacts,onSave,onClose})=>{
+  const [f,setF]=useState(initial||{title:"",type:"Telefonát",company_id:"",contact_id:"",date:today(),time:"",status:"Plánováno",note:""});
+  const u=(k,v)=>setF(p=>({...p,[k]:v}));
+  return <Modal title={initial?.id?"Upravit úkol":"Nový úkol"} onClose={onClose} onSave={()=>f.title&&onSave(f)} saveLabel="Uložit úkol" saveDisabled={!f.title}><TaskFormFields f={f} u={u} companies={companies} contacts={contacts}/></Modal>;
 };
 
-const DealModal = ({initial, companies, contacts, onSave, onClose}) => {
-  const [f,setF] = useState(initial||{title:"",company_id:"",contact_id:"",type:"",qty:1,value:"",status:"Identifikováno",due_date:"",note:""});
-  const u = (k,v) => setF(p=>({...p,[k]:v}));
-  return (
-    <Modal title={initial?.id?"Upravit deal":"Nový deal"} onClose={onClose}
-      onSave={()=>f.title&&onSave(f)} saveLabel="Uložit deal" saveDisabled={!f.title}>
-      <DealFormFields f={f} u={u} companies={companies} contacts={contacts}/>
-    </Modal>
-  );
+const DealModal=({initial,companies,contacts,onSave,onClose})=>{
+  const [f,setF]=useState(initial||{title:"",company_id:"",contact_id:"",type:"",qty:1,value:"",status:"Identifikováno",due_date:"",note:""});
+  const u=(k,v)=>setF(p=>({...p,[k]:v}));
+  return <Modal title={initial?.id?"Upravit deal":"Nový deal"} onClose={onClose} onSave={()=>f.title&&onSave(f)} saveLabel="Uložit deal" saveDisabled={!f.title}><DealFormFields f={f} u={u} companies={companies} contacts={contacts}/></Modal>;
 };
 
-const CompanyModal = ({initial, onSave, onClose}) => {
-  const [f,setF] = useState(initial||{name:"",industry:"",address:"",ico:"",status:"Studený",fleet:0,competitor:"",notes:[]});
-  const u = (k,v) => setF(p=>({...p,[k]:v}));
-  return (
-    <Modal title={initial?.id?"Upravit firmu":"Nová firma"} onClose={onClose}
-      onSave={()=>f.name&&onSave(f)} saveLabel="Uložit firmu" saveDisabled={!f.name}>
-      <CompanyFormFields f={f} u={u}/>
-    </Modal>
-  );
+const CompanyModal=({initial,onSave,onClose})=>{
+  const [f,setF]=useState(initial||{name:"",industry:"",address:"",ico:"",status:"Studený",fleet:0,competitor:"",notes:[]});
+  const u=(k,v)=>setF(p=>({...p,[k]:v}));
+  return <Modal title={initial?.id?"Upravit firmu":"Nová firma"} onClose={onClose} onSave={()=>f.name&&onSave(f)} saveLabel="Uložit firmu" saveDisabled={!f.name}><CompanyFormFields f={f} u={u}/></Modal>;
 };
 
-const ContactModal = ({initial, companies, onSave, onClose}) => {
-  const [f,setF] = useState(initial||{name:"",company_id:"",position:"",phone:"",email:"",linkedin:"",role:"Rozhodovatel",note:"",personal_note:""});
-  const u = (k,v) => setF(p=>({...p,[k]:v}));
-  return (
-    <Modal title={initial?.id?"Upravit kontakt":"Nový kontakt"} onClose={onClose}
-      onSave={()=>f.name&&onSave(f)} saveLabel="Uložit kontakt" saveDisabled={!f.name}>
-      <ContactFormFields f={f} u={u} companies={companies}/>
-    </Modal>
-  );
+const ContactModal=({initial,companies,onSave,onClose})=>{
+  const [f,setF]=useState(initial||{name:"",company_id:"",position:"",phone:"",email:"",linkedin:"",role:"Rozhodovatel",note:"",personal_note:""});
+  const u=(k,v)=>setF(p=>({...p,[k]:v}));
+  return <Modal title={initial?.id?"Upravit kontakt":"Nový kontakt"} onClose={onClose} onSave={()=>f.name&&onSave(f)} saveLabel="Uložit kontakt" saveDisabled={!f.name}><ContactFormFields f={f} u={u} companies={companies}/></Modal>;
 };
 
-// ── DASHBOARD ─────────────────────────────────────────────────────────────
-const Dashboard = ({data,onNavigate}) => {
-  const {companies,contacts,deals,tasks} = data;
-  const activeDeals = deals.filter(d=>!["Vyhráno","Prohráno"].includes(d.status));
-  const pipeline = activeDeals.reduce((s,d)=>s+(d.value||0),0);
-  const won = deals.filter(d=>d.status==="Vyhráno").reduce((s,d)=>s+(d.value||0),0);
-  const overdue = tasks.filter(t=>isOverdue(t.date,t.status));
-  const upcoming = tasks.filter(t=>t.status==="Plánováno").sort((a,b)=>(a.date||"").localeCompare(b.date||""));
-  const Stat = ({icon,label,value,sub,color,onClick}) => (
+const Dashboard=({data,onNavigate})=>{
+  const {companies,contacts,deals,tasks}=data;
+  const activeDeals=deals.filter(d=>!["Vyhráno","Prohráno"].includes(d.status));
+  const pipeline=activeDeals.reduce((s,d)=>s+(d.value||0),0);
+  const won=deals.filter(d=>d.status==="Vyhráno").reduce((s,d)=>s+(d.value||0),0);
+  const overdue=tasks.filter(t=>isOverdue(t.date,t.status));
+  const upcoming=tasks.filter(t=>t.status==="Plánováno").sort((a,b)=>(a.date||"").localeCompare(b.date||""));
+  const Stat=({icon,label,value,sub,color,onClick})=>(
     <div onClick={onClick} style={{background:C.white,border:`1px solid ${C.border}`,borderRadius:12,padding:"18px 20px",flex:1,minWidth:140,cursor:onClick?"pointer":"default",borderTop:`3px solid ${color}`,boxShadow:"0 1px 4px rgba(0,0,0,0.06)",transition:"all 0.2s"}}
       onMouseEnter={e=>onClick&&(e.currentTarget.style.boxShadow="0 4px 12px rgba(0,0,0,0.1)")}
       onMouseLeave={e=>(e.currentTarget.style.boxShadow="0 1px 4px rgba(0,0,0,0.06)")}>
@@ -558,23 +489,23 @@ const Dashboard = ({data,onNavigate}) => {
   );
 };
 
-// ── COMPANIES ─────────────────────────────────────────────────────────────
-const Companies = ({data,ops,focusId,onClearFocus}) => {
-  const [modal,setModal] = useState(null);
-  const [gcalTask,setGcalTask] = useState(null);
-  const [search,setSearch] = useState("");
-  const [filter,setFilter] = useState("Vše");
-  const [detail,setDetail] = useState(focusId||null);
-  useEffect(()=>{if(focusId){setDetail(focusId);onClearFocus&&onClearFocus();}}, [focusId]);
-
-  const companyNames = data.companies.map(c=>c.name);
-  const filtered = data.companies.filter(c=>{
+const Companies=({data,ops,focusId,onClearFocus})=>{
+  const [modal,setModal]=useState(null);
+  const [gcalTask,setGcalTask]=useState(null);
+  const [search,setSearch]=useState("");
+  const [filter,setFilter]=useState("Vše");
+  const [detail,setDetail]=useState(focusId||null);
+  useEffect(()=>{if(focusId){setDetail(focusId);onClearFocus&&onClearFocus();}},[focusId]);
+  const companyNames=data.companies.map(c=>c.name);
+  const filtered=data.companies.filter(c=>{
     const ms=c.name.toLowerCase().includes(search.toLowerCase())||(c.address||"").toLowerCase().includes(search.toLowerCase());
     return ms&&(filter==="Vše"||c.status===filter);
   });
-
-  const dc = data.companies.find(c=>c.id===detail);
-  if (dc) return (
+  const handleNoteAdd=async(dc,text)=>await ops.upsertCompany({...dc,notes:[...(dc.notes||[]),{text,date:today()}]});
+  const handleNoteEdit=async(dc,idx,newText)=>{const notes=[...(dc.notes||[])];notes[idx]={...notes[idx],text:newText};await ops.upsertCompany({...dc,notes});};
+  const handleNoteDelete=async(dc,idx)=>await ops.upsertCompany({...dc,notes:(dc.notes||[]).filter((_,i)=>i!==idx)});
+  const dc=data.companies.find(c=>c.id===detail);
+  if(dc) return (
     <div>
       <button onClick={()=>setDetail(null)} style={{...s.btn("ghost"),marginBottom:18}}>← Zpět</button>
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",flexWrap:"wrap",gap:10,marginBottom:18}}>
@@ -627,7 +558,7 @@ const Companies = ({data,ops,focusId,onClearFocus}) => {
       </div>
       <div style={s.card}>
         <CardSectionHeader title="Poznámky z terénu"/>
-        <NoteEntry notes={dc.notes||[]} onAdd={async(text)=>{await ops.upsertCompany({...dc,notes:[...(dc.notes||[]),{text,date:today()}]});}}/>
+        <NoteEntry notes={dc.notes||[]} onAdd={t=>handleNoteAdd(dc,t)} onEdit={(i,t)=>handleNoteEdit(dc,i,t)} onDelete={i=>handleNoteDelete(dc,i)}/>
       </div>
       <div style={s.card}>
         <CardSectionHeader title="Úkoly" onAdd={()=>setModal("newTask")}/>
@@ -649,14 +580,11 @@ const Companies = ({data,ops,focusId,onClearFocus}) => {
       {gcalTask&&<Modal title="" onClose={()=>setGcalTask(null)}><GCalPrompt task={gcalTask} companies={data.companies} contacts={data.contacts} onClose={()=>setGcalTask(null)}/></Modal>}
     </div>
   );
-
   return (
     <div>
       <SectionHeader title="Firmy" count={filtered.length} onAdd={()=>setModal("new")} addLabel="Přidat firmu"/>
       <div style={{display:"flex",gap:8,marginBottom:14,flexWrap:"wrap"}}>
-        <div style={{flex:1,minWidth:200}}>
-          <AutocompleteInput value={search} onChange={setSearch} suggestions={companyNames} placeholder="Hledat firmu…"/>
-        </div>
+        <div style={{flex:1,minWidth:200}}><AutocompleteInput value={search} onChange={setSearch} suggestions={companyNames} placeholder="Hledat firmu…"/></div>
         <div style={{display:"flex",gap:5,flexWrap:"wrap"}}>
           {["Vše",...STATUSES.company].map(st=>(
             <button key={st} onClick={()=>setFilter(st)} style={{...s.btn(filter===st?"primary":"ghost"),padding:"7px 11px",fontSize:11}}>{st}</button>
@@ -690,23 +618,16 @@ const Companies = ({data,ops,focusId,onClearFocus}) => {
   );
 };
 
-// ── CONTACTS ──────────────────────────────────────────────────────────────
-const Contacts = ({data,ops,onNavigateToCompany}) => {
-  const [modal,setModal] = useState(null);
-  const [search,setSearch] = useState("");
-  const contactNames = data.contacts.map(c=>c.name);
-  const filtered = data.contacts.filter(c=>
-    c.name.toLowerCase().includes(search.toLowerCase())||(c.position||"").toLowerCase().includes(search.toLowerCase())
-  );
-  const handleContactClick = (ct) => {
-    if (ct.company_id) onNavigateToCompany(ct.company_id);
-  };
+const Contacts=({data,ops,onNavigateToCompany})=>{
+  const [modal,setModal]=useState(null);
+  const [search,setSearch]=useState("");
+  const contactNames=data.contacts.map(c=>c.name);
+  const filtered=data.contacts.filter(c=>c.name.toLowerCase().includes(search.toLowerCase())||(c.position||"").toLowerCase().includes(search.toLowerCase()));
+  const handleContactClick=(ct)=>{if(ct.company_id)onNavigateToCompany(ct.company_id);};
   return (
     <div>
       <SectionHeader title="Kontakty" count={filtered.length} onAdd={()=>setModal("new")} addLabel="Přidat kontakt"/>
-      <div style={{marginBottom:14}}>
-        <AutocompleteInput value={search} onChange={setSearch} suggestions={contactNames} placeholder="Hledat kontakt…"/>
-      </div>
+      <div style={{marginBottom:14}}><AutocompleteInput value={search} onChange={setSearch} suggestions={contactNames} placeholder="Hledat kontakt…"/></div>
       <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(280px,1fr))",gap:14}}>
         {filtered.map(ct=>{
           const company=data.companies.find(c=>c.id===ct.company_id);
@@ -743,18 +664,17 @@ const Contacts = ({data,ops,onNavigateToCompany}) => {
   );
 };
 
-// ── DEALS ─────────────────────────────────────────────────────────────────
-const Deals = ({data,ops}) => {
-  const [modal,setModal] = useState(null);
-  const [filter,setFilter] = useState("Vše");
-  const filtered = data.deals.filter(d=>filter==="Vše"||d.status===filter);
+const Deals=({data,ops})=>{
+  const [modal,setModal]=useState(null);
+  const [filter,setFilter]=useState("Vše");
+  const filtered=data.deals.filter(d=>filter==="Vše"||d.status===filter);
   return (
     <div>
       <SectionHeader title="Pipeline" count={filtered.length} onAdd={()=>setModal("new")} addLabel="Přidat deal"/>
       <div style={{display:"flex",gap:8,marginBottom:14,flexWrap:"wrap"}}>
         {STATUSES.deal.map(st=>{
           const items=data.deals.filter(d=>d.status===st);
-          if(!items.length) return null;
+          if(!items.length)return null;
           return (
             <div key={st} onClick={()=>setFilter(filter===st?"Vše":st)} style={{background:filter===st?C.accentLight:C.white,border:`1px solid ${filter===st?C.accent:C.border}`,borderRadius:10,padding:"10px 14px",cursor:"pointer",transition:"all 0.15s",boxShadow:"0 1px 3px rgba(0,0,0,0.05)"}}>
               <div style={{fontSize:10,color:STATUS_COLORS[st],fontWeight:700,textTransform:"uppercase",letterSpacing:"0.4px"}}>{st}</div>
@@ -802,17 +722,16 @@ const Deals = ({data,ops}) => {
   );
 };
 
-// ── TASKS ─────────────────────────────────────────────────────────────────
-const Tasks = ({data,ops}) => {
-  const [modal,setModal] = useState(null);
-  const [gcalTask,setGcalTask] = useState(null);
-  const [filter,setFilter] = useState("Aktivní");
-  const overdueCount = data.tasks.filter(t=>isOverdue(t.date,t.status)).length;
-  const filtered = data.tasks.filter(t=>{
-    if(filter==="Aktivní") return ["Plánováno","Probíhá"].includes(t.status);
-    if(filter==="Dnes") return t.date===today()&&["Plánováno","Probíhá"].includes(t.status);
-    if(filter==="Po termínu") return isOverdue(t.date,t.status);
-    if(filter==="Dokončeno") return t.status==="Dokončeno";
+const Tasks=({data,ops})=>{
+  const [modal,setModal]=useState(null);
+  const [gcalTask,setGcalTask]=useState(null);
+  const [filter,setFilter]=useState("Aktivní");
+  const overdueCount=data.tasks.filter(t=>isOverdue(t.date,t.status)).length;
+  const filtered=data.tasks.filter(t=>{
+    if(filter==="Aktivní")return["Plánováno","Probíhá"].includes(t.status);
+    if(filter==="Dnes")return t.date===today()&&["Plánováno","Probíhá"].includes(t.status);
+    if(filter==="Po termínu")return isOverdue(t.date,t.status);
+    if(filter==="Dokončeno")return t.status==="Dokončeno";
     return true;
   }).sort((a,b)=>(a.date||"").localeCompare(b.date||""));
   return (
@@ -843,9 +762,7 @@ const Tasks = ({data,ops}) => {
             </div>
             {t.note&&<div style={{fontSize:12,color:C.textDim,marginBottom:8,fontStyle:"italic"}}>{t.note}</div>}
             <div style={{display:"flex",gap:6,flexWrap:"wrap",paddingTop:8,borderTop:`1px solid ${C.border}`}}>
-              <a href={gcalLink(t,company,contact)} target="_blank" rel="noreferrer" style={{...s.btn("gcal"),textDecoration:"none",padding:"6px 10px",fontSize:12}}>
-                <Icon d={Icons.gcal} size={13}/>GCal
-              </a>
+              <a href={gcalLink(t,company,contact)} target="_blank" rel="noreferrer" style={{...s.btn("gcal"),textDecoration:"none",padding:"6px 10px",fontSize:12}}><Icon d={Icons.gcal} size={13}/>GCal</a>
               {t.status!=="Dokončeno"&&<button onClick={()=>ops.upsertTask({...t,status:"Dokončeno"})} style={{...s.btn("ghost"),padding:"6px 10px",fontSize:12}}><Icon d={Icons.check} size={13}/>Hotovo</button>}
               <button onClick={()=>setModal(t.id)} style={{...s.btn("ghost"),padding:"6px 10px",fontSize:12}}><Icon d={Icons.edit} size={13}/>Upravit</button>
               <button onClick={()=>ops.deleteTask(t.id)} style={{...s.btn("danger"),padding:"6px 10px",fontSize:12}}><Icon d={Icons.trash} size={13}/></button>
@@ -857,9 +774,8 @@ const Tasks = ({data,ops}) => {
       {modal&&<TaskModal initial={modal==="new"?undefined:data.tasks.find(t=>t.id===modal)} companies={data.companies} contacts={data.contacts}
         onSave={async(f)=>{
           const saved=modal==="new"?{...clean(f),id:uid()}:{...data.tasks.find(t=>t.id===modal),...clean(f)};
-          await ops.upsertTask(saved);
-          setModal(null);
-          if(modal==="new") setGcalTask(saved);
+          await ops.upsertTask(saved);setModal(null);
+          if(modal==="new")setGcalTask(saved);
         }}
         onClose={()=>setModal(null)}/>}
       {gcalTask&&<Modal title="" onClose={()=>setGcalTask(null)}><GCalPrompt task={gcalTask} companies={data.companies} contacts={data.contacts} onClose={()=>setGcalTask(null)}/></Modal>}
@@ -867,8 +783,7 @@ const Tasks = ({data,ops}) => {
   );
 };
 
-// ── MAIN APP ──────────────────────────────────────────────────────────────
-const NAV = [
+const NAV=[
   {id:"dashboard",label:"Přehled",icon:Icons.chart},
   {id:"companies",label:"Firmy",icon:Icons.building},
   {id:"contacts",label:"Kontakty",icon:Icons.users},
@@ -876,39 +791,32 @@ const NAV = [
   {id:"tasks",label:"Úkoly",icon:Icons.check},
 ];
 
-export default function App() {
-  const [data,setData] = useState({companies:[],contacts:[],deals:[],tasks:[]});
-  const [syncStatus,setSyncStatus] = useState("loading");
-  const [page,setPage] = useState("dashboard");
-  const [focusId,setFocusId] = useState(null);
-
-  const loadAll = useCallback(async()=>{
+export default function App(){
+  const [data,setData]=useState({companies:[],contacts:[],deals:[],tasks:[]});
+  const [syncStatus,setSyncStatus]=useState("loading");
+  const [page,setPage]=useState("dashboard");
+  const [focusId,setFocusId]=useState(null);
+  const loadAll=useCallback(async()=>{
     setSyncStatus("loading");
-    try {
-      const [companies,contacts,deals,tasks] = await Promise.all([api.getCompanies(),api.getContacts(),api.getDeals(),api.getTasks()]);
-      setData({companies,contacts,deals,tasks});
-      setSyncStatus("ok");
-    } catch(e) { console.error(e); setSyncStatus("error"); }
+    try{
+      const [companies,contacts,deals,tasks]=await Promise.all([api.getCompanies(),api.getContacts(),api.getDeals(),api.getTasks()]);
+      setData({companies,contacts,deals,tasks});setSyncStatus("ok");
+    }catch(e){console.error(e);setSyncStatus("error");}
   },[]);
-
   useEffect(()=>{loadAll();},[]);
-
-  const wrap = (fn) => async(...args)=>{
+  const wrap=(fn)=>async(...args)=>{
     setSyncStatus("syncing");
-    try { await fn(...args); await loadAll(); }
-    catch(e) { console.error(e); setSyncStatus("error"); }
+    try{await fn(...args);await loadAll();}
+    catch(e){console.error(e);setSyncStatus("error");}
   };
-
-  const ops = {
-    upsertCompany:wrap(api.upsertCompany), deleteCompany:wrap(api.deleteCompany),
-    upsertContact:wrap(api.upsertContact), deleteContact:wrap(api.deleteContact),
-    upsertDeal:wrap(api.upsertDeal),       deleteDeal:wrap(api.deleteDeal),
-    upsertTask:wrap(api.upsertTask),       deleteTask:wrap(api.deleteTask),
+  const ops={
+    upsertCompany:wrap(api.upsertCompany),deleteCompany:wrap(api.deleteCompany),
+    upsertContact:wrap(api.upsertContact),deleteContact:wrap(api.deleteContact),
+    upsertDeal:wrap(api.upsertDeal),deleteDeal:wrap(api.deleteDeal),
+    upsertTask:wrap(api.upsertTask),deleteTask:wrap(api.deleteTask),
   };
-
-  const navigate = (p,id=null)=>{ setPage(p); setFocusId(id); };
-  const overdueCount = data.tasks.filter(t=>isOverdue(t.date,t.status)).length;
-
+  const navigate=(p,id=null)=>{setPage(p);setFocusId(id);};
+  const overdueCount=data.tasks.filter(t=>isOverdue(t.date,t.status)).length;
   return (
     <div style={{minHeight:"100vh",background:C.bg,color:C.text,fontFamily:"'Inter',system-ui,sans-serif"}}>
       <style>{`
@@ -918,7 +826,7 @@ export default function App() {
         ::-webkit-scrollbar-thumb{background:${C.border};border-radius:3px;}
         input[type=date]::-webkit-calendar-picker-indicator{filter:none;opacity:0.5;}
         select option{background:${C.white};color:${C.text};}
-        input:focus, select:focus, textarea:focus { border-color: ${C.accent} !important; box-shadow: 0 0 0 3px ${C.accentGlow}; }
+        input:focus,select:focus,textarea:focus{border-color:${C.accent}!important;box-shadow:0 0 0 3px ${C.accentGlow};}
         @keyframes spin{to{transform:rotate(360deg);}}
       `}</style>
       <div style={{position:"sticky",top:0,zIndex:100,background:C.white,borderBottom:`1px solid ${C.border}`,boxShadow:"0 1px 4px rgba(0,0,0,0.06)"}}>
