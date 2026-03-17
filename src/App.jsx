@@ -59,17 +59,33 @@ const Icons = {
   clock: ["M12 22a10 10 0 100-20 10 10 0 000 20z","M12 6v6l4 2"],
   gcal: ["M19 4H5a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2V6a2 2 0 00-2-2z","M16 2v4M8 2v4M3 10h18","M8 14h.01M12 14h.01M16 14h.01"],
   calendar: ["M19 4H5a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2V6a2 2 0 00-2-2z","M16 2v4M8 2v4M3 10h18"],
+  phoneIcon: "M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.07 9.8a19.79 19.79 0 01-3.07-8.67A2 2 0 012 .18h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L6.09 7.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z",
+  fileIcon: ["M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z","M14 2v6h6","M16 13H8","M16 17H8"],
+  usersIcon: ["M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2","M9 7a4 4 0 100 8 4 4 0 000-8z","M23 21v-2a4 4 0 00-3-3.87","M16 3.13a4 4 0 010 7.75"],
 };
 
 const C = {
-  bg: "#F4F5F7", surface: "#FFFFFF", surfaceHover: "#F0F8EC",
-  border: "#E2E4E9", borderLight: "#CBD0D8",
+  bg: "#F4F5F7", surface: "#FFFFFF",
+  border: "#E2E4E9",
   accent: "#2E8B00", accentDark: "#236D00", accentGlow:"rgba(46,139,0,0.1)", accentLight: "#F0F8EC",
   yellow: "#F5B800", yellowLight: "#FFF8E1",
   text: "#1A1A1A", textMuted: "#5C6070", textDim: "#9CA3AF",
   success: "#16A34A", warning: "#D97706", danger: "#DC2626", info: "#2563EB", purple: "#7C3AED",
   white: "#FFFFFF",
 };
+
+// Typy poznámek — firemní barvy VIVA (zelená + žlutá)
+const NOTE_TYPES = {
+  email:   { label:"Email", bg:"#F0F8EC", color:"#236D00", stroke:"#2E8B00", border:"#C8E6B0",
+             icon:["M4 4h16a2 2 0 012 2v12a2 2 0 01-2 2H4a2 2 0 01-2-2V6a2 2 0 012-2z","M22 6l-10 7L2 6"] },
+  tel:     { label:"Tel",   bg:"#FFF8E1", color:"#7A5200", stroke:"#B8860B", border:"#F5D580",
+             icon:"M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.07 9.8a19.79 19.79 0 01-3.07-8.67A2 2 0 012 .18h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L6.09 7.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z" },
+  sch:     { label:"Sch",   bg:"#F0F8EC", color:"#236D00", stroke:"#2E8B00", border:"#C8E6B0",
+             icon:["M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2","M9 7a4 4 0 100 8 4 4 0 000-8z","M23 21v-2a4 4 0 00-3-3.87","M16 3.13a4 4 0 010 7.75"] },
+  nab:     { label:"Nab",   bg:"#FFF8E1", color:"#7A5200", stroke:"#B8860B", border:"#F5D580",
+             icon:["M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z","M14 2v6h6","M16 13H8","M16 17H8"] },
+};
+const LONG_NOTE = 120;
 
 const STATUSES = {
   company: ["Studený","Oslovený","Aktivní jednání","Zákazník","Spící"],
@@ -85,16 +101,6 @@ const INDUSTRIES = ["Výroba","Logistika","Automotive","Stavebnictví","Zemědě
 const TASK_TYPES = ["Telefonát","Návštěva","E-mail","Nabídka","Prezentace","Jiné"];
 const VZV_TYPES = ["Elektrický čelní","Elektrický CPD25","Dieselový","LPG","Retrák","Nízkozdvižný","Jiné"];
 const COMPETITORS = ["Toyota","Linde","Jungheinrich","Still","Crown","Manitou","Doosan","Jiný"];
-
-// Detekce štítku z textu — pokud poznámka začíná ✉, 📞, 🤝, 📄 nebo slovem Email/Telefonát/Schůzka/Nabídka
-const NOTE_LABELS = [
-  { match: /^✉|^email/i, icon: "✉", label: "Email" },
-  { match: /^📞|^tel|^telefon/i, icon: "📞", label: "Telefonát" },
-  { match: /^🤝|^schůzka|^navštěva|^návštěva/i, icon: "🤝", label: "Schůzka" },
-  { match: /^📄|^nabídka/i, icon: "📄", label: "Nabídka" },
-];
-const detectLabel = (text) => NOTE_LABELS.find(l => l.match.test(text?.trim())) || null;
-const LONG_NOTE_THRESHOLD = 120; // znaky — nad tímto limitem se zobrazí "Zobrazit více"
 
 const uid = () => Math.random().toString(36).slice(2,9);
 const today = () => new Date().toISOString().split("T")[0];
@@ -132,7 +138,6 @@ const inp = {
 const s = {
   badge: (color) => ({ display:"inline-block", padding:"3px 10px", borderRadius:20, fontSize:11, fontWeight:600, background:`${color}18`, color, border:`1px solid ${color}33`, letterSpacing:"0.3px", whiteSpace:"nowrap" }),
   card: { background:C.white, border:`1px solid ${C.border}`, borderRadius:12, padding:"18px 22px", marginBottom:12, boxShadow:"0 1px 4px rgba(0,0,0,0.06)" },
-  input: inp,
   btn: (v="primary") => ({
     display:"inline-flex", alignItems:"center", gap:6, padding:"8px 16px", borderRadius:8, border:"none", cursor:"pointer", fontSize:13, fontWeight:600, transition:"all 0.15s",
     ...(v==="primary"?{background:C.accent,color:C.white,boxShadow:`0 2px 8px ${C.accentGlow}`}:
@@ -270,17 +275,14 @@ const SectionHeader = ({title,count,onAdd,addLabel="Přidat"}) => (
 
 const AddButton = ({onClick}) => (
   <button onClick={onClick} style={{
-    display:"inline-flex", alignItems:"center", justifyContent:"center",
-    width:30, height:30, borderRadius:"50%",
-    border:`2px solid ${C.accent}`, background:C.accentLight,
-    color:C.accent, cursor:"pointer", flexShrink:0,
-    transition:"all 0.15s", padding:0,
+    display:"inline-flex",alignItems:"center",justifyContent:"center",
+    width:30,height:30,borderRadius:"50%",
+    border:`2px solid ${C.accent}`,background:C.accentLight,
+    color:C.accent,cursor:"pointer",flexShrink:0,transition:"all 0.15s",padding:0,
   }}
     onMouseEnter={e=>{e.currentTarget.style.background=C.accent;e.currentTarget.style.color=C.white;}}
     onMouseLeave={e=>{e.currentTarget.style.background=C.accentLight;e.currentTarget.style.color=C.accent;}}
-  >
-    <Icon d={Icons.plus} size={14}/>
-  </button>
+  ><Icon d={Icons.plus} size={14}/></button>
 );
 
 const CardSectionHeader = ({title, onAdd}) => (
@@ -290,55 +292,72 @@ const CardSectionHeader = ({title, onAdd}) => (
   </div>
 );
 
-// ── ROZBALOVACÍ POZNÁMKA ───────────────────────────────────────────────────
+// ── ŠTÍTEK POZNÁMKY ───────────────────────────────────────────────────────
+const NoteTypeBadge = ({type}) => {
+  const t = NOTE_TYPES[type];
+  if (!t) return null;
+  return (
+    <div style={{display:"inline-flex",alignItems:"center",gap:4,background:t.bg,color:t.color,padding:"2px 8px",borderRadius:10,fontSize:11,fontWeight:600,border:`1px solid ${t.border}`}}>
+      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke={t.stroke} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+        {Array.isArray(t.icon)?t.icon.map((p,i)=><path key={i} d={p}/>):<path d={t.icon}/>}
+      </svg>
+      {t.label}
+    </div>
+  );
+};
+
+// ── TLAČÍTKA VÝBĚRU TYPU ──────────────────────────────────────────────────
+const NoteTypeSelector = ({selected, onSelect}) => (
+  <div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:8}}>
+    {Object.entries(NOTE_TYPES).map(([key, t]) => {
+      const active = selected === key;
+      return (
+        <button key={key} onClick={()=>onSelect(key)} style={{
+          display:"inline-flex",alignItems:"center",gap:5,
+          padding:"6px 12px",borderRadius:20,fontSize:12,fontWeight:600,cursor:"pointer",
+          border:`1.5px solid ${active?t.stroke:C.border}`,
+          background:active?t.bg:C.white,
+          color:active?t.color:C.textMuted,
+          transition:"all 0.15s",
+        }}>
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={active?t.stroke:"currentColor"} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+            {Array.isArray(t.icon)?t.icon.map((p,i)=><path key={i} d={p}/>):<path d={t.icon}/>}
+          </svg>
+          {t.label}
+        </button>
+      );
+    })}
+  </div>
+);
+
+// ── JEDNA POZNÁMKA (rozbalovací) ──────────────────────────────────────────
 const NoteItem = ({note, origIdx, onEdit, onDelete}) => {
   const [expanded, setExpanded] = useState(false);
-  const isLong = (note.text||"").length > LONG_NOTE_THRESHOLD;
-  const label = detectLabel(note.text);
-
+  const isLong = (note.text||"").length > LONG_NOTE;
   return (
-    <div style={{padding:"10px 0", borderBottom:`1px solid ${C.border}`}}>
+    <div style={{padding:"10px 0",borderBottom:`1px solid ${C.border}`}}>
       <div style={{display:"flex",gap:10,alignItems:"flex-start"}}>
         <div style={{width:6,height:6,borderRadius:3,background:C.accent,marginTop:5,flexShrink:0}}/>
         <div style={{flex:1,minWidth:0}}>
-          {/* Štítek + datum */}
-          <div style={{fontSize:11,color:C.textDim,marginBottom:3}}>
-            {label && <span style={{marginRight:6}}>{label.icon} {label.label} · </span>}
-            {fmtDate(note.date)}
+          <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:3,flexWrap:"wrap"}}>
+            <NoteTypeBadge type={note.type}/>
+            <span style={{fontSize:11,color:C.textDim}}>{fmtDate(note.date)}</span>
           </div>
-          {/* Text — sbalený nebo rozbalený */}
           <div style={{
-            fontSize:13, color:C.text, lineHeight:1.5,
-            ...(isLong && !expanded ? {
-              overflow:"hidden",
-              display:"-webkit-box",
-              WebkitLineClamp:2,
-              WebkitBoxOrient:"vertical",
-            } : {})
-          }}>
-            {note.text}
-          </div>
-          {/* Tlačítko Zobrazit více */}
-          {isLong && (
-            <button onClick={()=>setExpanded(!expanded)} style={{
-              background:"none", border:"none", cursor:"pointer",
-              color:C.accent, fontSize:12, fontWeight:600,
-              padding:"4px 0 0", textDecoration:"underline"
-            }}>
-              {expanded ? "Skrýt" : "Zobrazit více"}
+            fontSize:13,color:C.text,lineHeight:1.5,
+            ...(isLong&&!expanded?{overflow:"hidden",display:"-webkit-box",WebkitLineClamp:2,WebkitBoxOrient:"vertical"}:{})
+          }}>{note.text}</div>
+          {isLong&&(
+            <button onClick={()=>setExpanded(!expanded)} style={{background:"none",border:"none",cursor:"pointer",color:C.accent,fontSize:12,fontWeight:600,padding:"4px 0 0",textDecoration:"underline"}}>
+              {expanded?"Skrýt":"Zobrazit více"}
             </button>
           )}
         </div>
-        {/* Akce */}
         <div style={{display:"flex",gap:4,flexShrink:0}}>
-          <button onClick={()=>onEdit(origIdx, note.text)}
-            style={{background:"none",border:"none",cursor:"pointer",color:C.textDim,padding:"2px 4px",borderRadius:4}}
-            title="Upravit">
+          <button onClick={()=>onEdit(origIdx,note.text,note.type)} style={{background:"none",border:"none",cursor:"pointer",color:C.textDim,padding:"2px 4px",borderRadius:4}} title="Upravit">
             <Icon d={Icons.edit} size={13}/>
           </button>
-          <button onClick={()=>onDelete(origIdx)}
-            style={{background:"none",border:"none",cursor:"pointer",color:C.danger,padding:"2px 4px",borderRadius:4}}
-            title="Smazat">
+          <button onClick={()=>onDelete(origIdx)} style={{background:"none",border:"none",cursor:"pointer",color:C.danger,padding:"2px 4px",borderRadius:4}} title="Smazat">
             <Icon d={Icons.trash} size={13}/>
           </button>
         </div>
@@ -347,47 +366,51 @@ const NoteItem = ({note, origIdx, onEdit, onDelete}) => {
   );
 };
 
-// ── POZNÁMKY Z TERÉNU ─────────────────────────────────────────────────────
+// ── SEKCE POZNÁMEK Z TERÉNU ───────────────────────────────────────────────
 const NoteEntry = ({notes=[], onAdd, onUpdate, onDelete}) => {
   const [text, setText] = useState("");
+  const [noteType, setNoteType] = useState("email");
   const [editIdx, setEditIdx] = useState(null);
   const [editText, setEditText] = useState("");
+  const [editType, setEditType] = useState("email");
 
   const submit = () => {
-    if (text.trim()) { onAdd(text.trim()); setText(""); }
+    if (text.trim()) { onAdd(text.trim(), noteType); setText(""); }
   };
 
-  const startEdit = (i, currentText) => {
-    setEditIdx(i);
-    setEditText(currentText);
+  const startEdit = (i, currentText, currentType) => {
+    setEditIdx(i); setEditText(currentText); setEditType(currentType||"email");
   };
 
   const saveEdit = (i) => {
-    if (editText.trim()) { onUpdate(i, editText.trim()); }
+    if (editText.trim()) onUpdate(i, editText.trim(), editType);
     setEditIdx(null);
   };
 
-  const reversed = [...notes].map((n,i)=>({...n, origIdx:i})).reverse();
+  const reversed = [...notes].map((n,i)=>({...n,origIdx:i})).reverse();
 
   return (
     <div>
-      <div style={{marginBottom:8,fontSize:11,color:C.textDim,lineHeight:1.4}}>
-        Tip: začni poznámku štítkem jako <strong>✉ Email</strong>, <strong>📞 Telefonát</strong>, <strong>🤝 Schůzka</strong> nebo <strong>📄 Nabídka</strong> — automaticky se zobrazí jako nadpis.
-      </div>
+      <NoteTypeSelector selected={noteType} onSelect={setNoteType}/>
       <div style={{display:"flex",gap:8}}>
-        <Input value={text} onChange={e=>setText(e.target.value)}
-          placeholder="✉ Email — Dobrý den, zasílám nabídku…"
-          onKeyDown={e=>e.key==="Enter"&&e.ctrlKey&&submit()}/>
+        <textarea
+          value={text}
+          onChange={e=>setText(e.target.value)}
+          onKeyDown={e=>e.key==="Enter"&&e.ctrlKey&&submit()}
+          placeholder="Napiš poznámku…"
+          style={{...inp,minHeight:64,resize:"vertical",flex:1}}
+        />
         <AddButton onClick={submit}/>
       </div>
-      <div style={{fontSize:10,color:C.textDim,marginTop:4,marginBottom:8}}>Ctrl+Enter pro uložení</div>
+      <div style={{fontSize:10,color:C.textDim,marginTop:4,marginBottom:12}}>Ctrl+Enter pro uložení</div>
 
       <div>
         {reversed.map((n) => (
-          editIdx === n.origIdx ? (
+          editIdx===n.origIdx ? (
             <div key={n.origIdx} style={{padding:"10px 0",borderBottom:`1px solid ${C.border}`}}>
+              <NoteTypeSelector selected={editType} onSelect={setEditType}/>
               <textarea
-                style={{...inp, minHeight:80, resize:"vertical", marginBottom:8}}
+                style={{...inp,minHeight:80,resize:"vertical",marginBottom:8}}
                 value={editText}
                 onChange={e=>setEditText(e.target.value)}
                 autoFocus/>
@@ -399,8 +422,7 @@ const NoteEntry = ({notes=[], onAdd, onUpdate, onDelete}) => {
               </div>
             </div>
           ) : (
-            <NoteItem key={n.origIdx} note={n} origIdx={n.origIdx}
-              onEdit={startEdit} onDelete={onDelete}/>
+            <NoteItem key={n.origIdx} note={n} origIdx={n.origIdx} onEdit={startEdit} onDelete={onDelete}/>
           )
         ))}
         {notes.length===0&&<div style={{color:C.textDim,fontSize:13,textAlign:"center",padding:"14px 0"}}>Zatím žádné poznámky</div>}
@@ -629,12 +651,12 @@ const Companies = ({data,ops,focusId,onClearFocus}) => {
 
   const dc = data.companies.find(c=>c.id===detail);
 
-  const handleNoteAdd = async (text) => {
-    await ops.upsertCompany({...dc, notes:[...(dc.notes||[]), {text, date:today()}]});
+  const handleNoteAdd = async (text, type) => {
+    await ops.upsertCompany({...dc, notes:[...(dc.notes||[]), {text, type, date:today()}]});
   };
-  const handleNoteUpdate = async (idx, text) => {
+  const handleNoteUpdate = async (idx, text, type) => {
     const notes = [...(dc.notes||[])];
-    notes[idx] = {...notes[idx], text};
+    notes[idx] = {...notes[idx], text, type};
     await ops.upsertCompany({...dc, notes});
   };
   const handleNoteDelete = async (idx) => {
@@ -767,9 +789,6 @@ const Contacts = ({data,ops,onNavigateToCompany}) => {
   const filtered = data.contacts.filter(c=>
     c.name.toLowerCase().includes(search.toLowerCase())||(c.position||"").toLowerCase().includes(search.toLowerCase())
   );
-  const handleContactClick = (ct) => {
-    if (ct.company_id) onNavigateToCompany(ct.company_id);
-  };
   return (
     <div>
       <SectionHeader title="Kontakty" count={filtered.length} onAdd={()=>setModal("new")} addLabel="Přidat kontakt"/>
@@ -783,9 +802,9 @@ const Contacts = ({data,ops,onNavigateToCompany}) => {
             <div key={ct.id} style={s.card}>
               <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:8}}>
                 <div>
-                  <div onClick={()=>handleContactClick(ct)} style={{fontWeight:700,fontSize:14,color:ct.company_id?C.accent:C.text,cursor:ct.company_id?"pointer":"default",marginBottom:2}}>{ct.name}</div>
+                  <div onClick={()=>ct.company_id&&onNavigateToCompany(ct.company_id)} style={{fontWeight:700,fontSize:14,color:ct.company_id?C.accent:C.text,cursor:ct.company_id?"pointer":"default",marginBottom:2}}>{ct.name}</div>
                   <div style={{fontSize:12,color:C.textMuted}}>{ct.position}</div>
-                  {company&&<div onClick={()=>handleContactClick(ct)} style={{fontSize:11,color:C.accent,marginTop:2,cursor:"pointer",display:"flex",alignItems:"center",gap:3,fontWeight:500}}><Icon d={Icons.building} size={10}/>{company.name}</div>}
+                  {company&&<div onClick={()=>onNavigateToCompany(ct.company_id)} style={{fontSize:11,color:C.accent,marginTop:2,cursor:"pointer",display:"flex",alignItems:"center",gap:3,fontWeight:500}}><Icon d={Icons.building} size={10}/>{company.name}</div>}
                 </div>
                 <span style={s.badge(C.purple)}>{ct.role}</span>
               </div>
