@@ -1107,7 +1107,7 @@ export default function App() {
   }, [session]);
 
   const makeApi = (token) => ({
-    getCompanies: () => sb("companies?order=created.desc", {}, token),
+    getCompanies: () => sb("companies?order=updated_at.desc.nullslast", {}, token),
     upsertCompany: (c) => sb("companies", { method:"POST", body:JSON.stringify(c), headers:{"Prefer":"resolution=merge-duplicates,return=representation"} }, token),
     deleteCompany: (id) => sb(`companies?id=eq.${id}`, { method:"DELETE", prefer:"" }, token),
     getContacts: () => sb("contacts?order=name.asc", {}, token),
