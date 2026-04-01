@@ -748,21 +748,7 @@ const Dashboard = ({data, profile, onNavigate}) => {
       <div style={{marginBottom:16,padding:"20px 24px",background:C.white,borderRadius:12,border:`1px solid ${C.border}`,boxShadow:"0 1px 4px rgba(0,0,0,0.06)"}}>
         <div style={{fontSize:11,color:C.textDim,marginBottom:3,fontWeight:500}}>{new Date().toLocaleDateString("cs-CZ",{weekday:"long",year:"numeric",month:"long",day:"numeric"})}</div>
         <h1 style={{margin:0,fontSize:24,fontWeight:800,color:C.text}}>Dobrý den, {firstName} 👋</h1>
-        <p style={{margin:"4px 0 14px",color:C.textMuted,fontSize:13}}>Přehled VZV pipeline · VIVA Lovosice{profile?.region?` · ${profile.region} region`:""}</p>
-        <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
-          {[
-            {label:"+ Nová firma",color:C.accent,bg:C.accentLight,page:"companies"},
-            {label:"+ Nový deal",color:C.info,bg:"#EFF6FF",page:"deals"},
-            {label:"+ Úkol",color:C.warning,bg:"#FFFBEB",page:"tasks"},
-            {label:"+ Kontakt",color:C.purple,bg:"#F5F3FF",page:"contacts"},
-          ].map(({label,color,bg,page})=>(
-            <button key={label} onClick={()=>onNavigate(page,"new")}
-              style={{padding:"7px 14px",borderRadius:8,border:`1px solid ${color}30`,background:bg,color,fontSize:12,fontWeight:600,cursor:"pointer",transition:"all 0.15s"}}
-              onMouseEnter={e=>{e.currentTarget.style.background=color;e.currentTarget.style.color=C.white;}}
-              onMouseLeave={e=>{e.currentTarget.style.background=bg;e.currentTarget.style.color=color;}}
-            >{label}</button>
-          ))}
-        </div>
+        <p style={{margin:"4px 0 0",color:C.textMuted,fontSize:13}}>Přehled VZV pipeline · VIVA Lovosice{profile?.region?` · ${profile.region} region`:""}</p>
       </div>
 
       <div style={{display:"flex",gap:12,flexWrap:"wrap",marginBottom:16}}>
