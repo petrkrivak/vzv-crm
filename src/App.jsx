@@ -896,6 +896,21 @@ const Dashboard = ({data, profile, onNavigate}) => {
   );
 };
 
+// --- HELPERS pro sledování posledního zobrazení firmy ---
+const getViewedAt = () => {
+  try { return JSON.parse(localStorage.getItem("vzv_viewed_at") || "{}"); } catch { return {}; }
+};
+const recordViewedAt = (id) => {
+  const map = getViewedAt();
+  map[id] = new Date().toISOString();
+  localStorage.setItem("vzv_viewed_at", JSON.stringify(map));
+};
+const getLastInteraction = (company, viewedAt) => {
+  const lastNote = (company.notes || []).reduce((best, n) => (n.date||"") > best ? (n.date||"") : best, "");
+  const lastView = viewedAt[company.id] || "";
+  return lastNote > lastView ? lastNote : lastView;
+};
+
 // --- COMPANIES ---
 const Companies = ({data,ops,focusId,onClearFocus}) => {
   const [modal,setModal] = useState(null);
@@ -903,16 +918,32 @@ const Companies = ({data,ops,focusId,onClearFocus}) => {
   const [search,setSearch] = useState("");
   const [filter,setFilter] = useState("Vše");
   const [detail,setDetail] = useState(focusId&&focusId!=="new"?focusId:null);
+  const [viewedAt, setViewedAtState] = useState(getViewedAt);
+
   useEffect(()=>{
-    if(focusId&&focusId!=="new"){setDetail(focusId);onClearFocus&&onClearFocus();}
+    if(focusId&&focusId!=="new"){handleSetDetail(focusId);onClearFocus&&onClearFocus();}
     else if(focusId==="new"){setModal("new");onClearFocus&&onClearFocus();}
   }, [focusId]);
 
+  const handleSetDetail = (id) => {
+    if (id) { recordViewedAt(id); setViewedAtState(getViewedAt()); }
+    setDetail(id);
+  };
+
   const companyNames = data.companies.map(c=>c.name);
-  const filtered = data.companies.filter(c=>{
-    const ms=c.name.toLowerCase().includes(search.toLowerCase())||(c.address||"").toLowerCase().includes(search.toLowerCase());
-    return ms&&(filter==="Vše"||c.status===filter);
-  });
+  const filtered = data.companies
+    .filter(c=>{
+      const ms=c.name.toLowerCase().includes(search.toLowerCase())||(c.address||"").toLowerCase().includes(search.toLowerCase());
+      return ms&&(filter==="Vše"||c.status===filter);
+    })
+    .sort((a,b)=>{
+      const ia = getLastInteraction(a, viewedAt);
+      const ib = getLastInteraction(b, viewedAt);
+      if (ib && ia) return ib.localeCompare(ia);
+      if (ib) return 1;
+      if (ia) return -1;
+      return (a.name||"").localeCompare(b.name||"");
+    });
   const dc = data.companies.find(c=>c.id===detail);
   const handleNoteAdd = async (text, type) => { await ops.upsertCompany({...dc, notes:[...(dc.notes||[]), {text, type, date:today()}]}); };
   const handleNoteUpdate = async (idx, text, type) => { const notes=[...(dc.notes||[])]; notes[idx]={...notes[idx],text,type}; await ops.upsertCompany({...dc,notes}); };
@@ -921,7 +952,7 @@ const Companies = ({data,ops,focusId,onClearFocus}) => {
 
   if (dc) return (
     <div>
-      <button onClick={()=>setDetail(null)} style={{...s.btn("ghost"),marginBottom:18}}>← Zpět na firmy</button>
+      <button onClick={()=>handleSetDetail(null)} style={{...s.btn("ghost"),marginBottom:18}}>← Zpět na firmy</button>
       <div style={{...s.card,marginBottom:14}}>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",flexWrap:"wrap",gap:12}}>
           <div style={{display:"flex",gap:14,alignItems:"flex-start"}}>
@@ -944,7 +975,7 @@ const Companies = ({data,ops,focusId,onClearFocus}) => {
             <button onClick={()=>setModal("newTask")} style={{...s.btn("primary"),padding:"7px 14px",fontSize:12}}><Icon d={Icons.plus} size={12}/>Úkol</button>
             <button onClick={()=>setModal("newDeal")} style={{...s.btn("ghost"),padding:"7px 14px",fontSize:12}}><Icon d={Icons.target} size={12}/>Deal</button>
             <button onClick={()=>setModal("edit")} style={{...s.btn("ghost"),padding:"7px 14px",fontSize:12}}><Icon d={Icons.edit} size={12}/>Upravit</button>
-            <button onClick={async()=>{await ops.deleteCompany(dc.id);setDetail(null);}} style={{...s.btn("danger"),padding:"7px 10px",fontSize:12}}><Icon d={Icons.trash} size={12}/></button>
+            <button onClick={async()=>{await ops.deleteCompany(dc.id);handleSetDetail(null);}} style={{...s.btn("danger"),padding:"7px 10px",fontSize:12}}><Icon d={Icons.trash} size={12}/></button>
           </div>
         </div>
       </div>
@@ -1034,7 +1065,7 @@ const Companies = ({data,ops,focusId,onClearFocus}) => {
         const lastNote=(c.notes||[]).slice(-1)[0];
         const dealValue=data.deals.filter(d=>d.company_id===c.id&&!["Vyhráno","Prohráno"].includes(d.status)).reduce((s,d)=>s+(d.value||0),0);
         return (
-          <div key={c.id} onClick={()=>setDetail(c.id)} style={{...s.card,cursor:"pointer",transition:"all 0.15s"}}
+          <div key={c.id} onClick={()=>handleSetDetail(c.id)} style={{...s.card,cursor:"pointer",transition:"all 0.15s"}}
             onMouseEnter={e=>{e.currentTarget.style.borderColor=C.accent;e.currentTarget.style.boxShadow="0 2px 8px rgba(46,139,0,0.1)";}}
             onMouseLeave={e=>{e.currentTarget.style.borderColor=C.border;e.currentTarget.style.boxShadow="0 1px 4px rgba(0,0,0,0.06)";}}>
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:12}}>
