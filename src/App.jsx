@@ -5,8 +5,29 @@ const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZ
 
 // --- SUPABASE KLIENT ---
 
-// REST API helper (pro data)
-const sb = async (path, opts = {}, token = null) => {
+// Auth: refresh token
+const refreshSession = async (refreshToken) => {
+  const res = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=refresh_token`, {
+    method: "POST",
+    headers: {
+      "apikey": SUPABASE_KEY,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ refresh_token: refreshToken }),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error_description || data.msg || "Token refresh selhal");
+  return data;
+};
+
+// Kontrola expirace tokenu (s 60s rezervou)
+const isTokenExpired = (session) => {
+  if (!session?.expires_at) return false;
+  return Date.now() / 1000 > session.expires_at - 60;
+};
+
+// REST API helper (pro data) — s automatickým retry při 401
+const sb = async (path, opts = {}, token = null, retried = false) => {
   const { prefer, headers: extraHeaders, ...rest } = opts;
   const authHeader = token
     ? { "Authorization": `Bearer ${token}` }
@@ -21,6 +42,23 @@ const sb = async (path, opts = {}, token = null) => {
     },
     ...rest,
   });
+
+  // Při 401 zkus refresh tokenu (jen jednou)
+  if (res.status === 401 && !retried) {
+    const stored = getStoredSession();
+    if (stored?.refresh_token) {
+      try {
+        const newSession = await refreshSession(stored.refresh_token);
+        storeSession(newSession);
+        // Retry s novým tokenem
+        return sb(path, opts, newSession.access_token, true);
+      } catch {
+        storeSession(null);
+        window.location.reload();
+      }
+    }
+  }
+
   if (!res.ok) { const e = await res.text(); throw new Error(e); }
   const text = await res.text();
   return text ? JSON.parse(text) : [];
@@ -269,7 +307,6 @@ const LoginScreen = ({ onLogin }) => {
     <div style={{minHeight:"100vh",background:`linear-gradient(135deg, ${C.accentLight} 0%, ${C.bg} 50%, ${C.yellowLight} 100%)`,display:"flex",alignItems:"center",justifyContent:"center",fontFamily:"'Inter',system-ui,sans-serif",padding:20}}>
       <style>{`@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');*{box-sizing:border-box;}input:focus{border-color:${C.accent}!important;box-shadow:0 0 0 3px ${C.accentGlow}!important;outline:none;}`}</style>
       <div style={{background:C.white,borderRadius:20,padding:"40px 36px",width:"100%",maxWidth:400,boxShadow:"0 8px 40px rgba(0,0,0,0.12)"}}>
-        {/* Logo */}
         <div style={{textAlign:"center",marginBottom:32}}>
           <div style={{display:"inline-flex",alignItems:"center",gap:10,marginBottom:8}}>
             <div style={{background:C.accent,borderRadius:10,padding:"8px 10px",display:"flex",alignItems:"center",borderRight:`4px solid ${C.yellow}`}}>
@@ -334,7 +371,6 @@ const UserManagement = ({ session, profiles, onRefresh }) => {
     if (!form.email || !form.password || !form.full_name) { setError("Vyplňte všechna povinná pole"); return; }
     setLoading(true); setError(""); setSuccess("");
     try {
-      // Vytvoření uživatele přes Supabase Admin API
       const res = await fetch(`${SUPABASE_URL}/auth/v1/admin/users`, {
         method: "POST",
         headers: {
@@ -352,7 +388,6 @@ const UserManagement = ({ session, profiles, onRefresh }) => {
       const data = await res.json();
       if (!res.ok) throw new Error(data.msg || "Chyba vytvoření uživatele");
 
-      // Uložení profilu
       await sb(`profiles`, {
         method: "POST",
         body: JSON.stringify({ id: data.id, email: form.email, full_name: form.full_name, role: form.role, region: form.region }),
@@ -653,7 +688,6 @@ const ContactFormFields = ({f, u, companies}) => (
   </div>
 );
 
-// Modaly
 const TaskModal = ({initial, companies, contacts, profiles, onSave, onClose}) => {
   const [f,setF] = useState(initial||{title:"",type:"Telefonát",company_id:"",contact_id:"",date:today(),time:"",status:"Plánováno",note:""});
   const u = (k,v) => setF(p=>({...p,[k]:v}));
@@ -675,7 +709,7 @@ const ContactModal = ({initial, companies, onSave, onClose}) => {
   return <Modal title={initial?.id?"Upravit kontakt":"Nový kontakt"} onClose={onClose} onSave={()=>f.name&&onSave(f)} saveLabel="Uložit kontakt" saveDisabled={!f.name}><ContactFormFields f={f} u={u} companies={companies}/></Modal>;
 };
 
-// --- DASHBOARD (REDESIGN A) ---
+// --- DASHBOARD ---
 const Dashboard = ({data, profile, onNavigate}) => {
   const {companies,contacts,deals,tasks,profiles} = data;
   const myTasks = tasks.filter(t=>t.owner_id===profile?.id||!t.owner_id);
@@ -686,7 +720,6 @@ const Dashboard = ({data, profile, onNavigate}) => {
   const todayTasks = myTasks.filter(t=>t.date===today()&&["Plánováno","Probíhá"].includes(t.status)).sort((a,b)=>(a.time||"").localeCompare(b.time||""));
   const upcoming = myTasks.filter(t=>t.status==="Plánováno"&&t.date>today()).sort((a,b)=>(a.date||"").localeCompare(b.date||""));
 
-  // Graf aktivity — počty poznámek za posledních 7 dní
   const days = Array.from({length:7},(_,i)=>{ const d=new Date(); d.setDate(d.getDate()-6+i); return d.toISOString().split("T")[0]; });
   const dayLabels = Array.from({length:7},(_,i)=>{ const d=new Date(); d.setDate(d.getDate()-6+i); return ["Ne","Po","Út","St","Čt","Pá","So"][d.getDay()]; });
   const activityByDay = days.map(day=>companies.reduce((acc,c)=>acc+(c.notes||[]).filter(n=>n.date===day).length,0));
@@ -712,12 +745,10 @@ const Dashboard = ({data, profile, onNavigate}) => {
 
   return (
     <div>
-      {/* Hlavička s rychlými akcemi */}
       <div style={{marginBottom:16,padding:"20px 24px",background:C.white,borderRadius:12,border:`1px solid ${C.border}`,boxShadow:"0 1px 4px rgba(0,0,0,0.06)"}}>
         <div style={{fontSize:11,color:C.textDim,marginBottom:3,fontWeight:500}}>{new Date().toLocaleDateString("cs-CZ",{weekday:"long",year:"numeric",month:"long",day:"numeric"})}</div>
         <h1 style={{margin:0,fontSize:24,fontWeight:800,color:C.text}}>Dobrý den, {firstName} 👋</h1>
         <p style={{margin:"4px 0 14px",color:C.textMuted,fontSize:13}}>Přehled VZV pipeline · VIVA Lovosice{profile?.region?` · ${profile.region} region`:""}</p>
-        {/* Rychlé akce */}
         <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
           {[
             {label:"+ Nová firma",color:C.accent,bg:C.accentLight,page:"companies"},
@@ -734,7 +765,6 @@ const Dashboard = ({data, profile, onNavigate}) => {
         </div>
       </div>
 
-      {/* Statistiky */}
       <div style={{display:"flex",gap:12,flexWrap:"wrap",marginBottom:16}}>
         <Stat icon={Icons.building} label="Firmy" value={companies.length} sub={`${companies.filter(c=>c.status==="Zákazník").length} zákazníků`} color={C.info} onClick={()=>onNavigate("companies")}/>
         <Stat icon={Icons.target} label="Pipeline" value={fmtMoney(pipeline)} sub={`${activeDeals.length} příležitostí`} color={C.accent} onClick={()=>onNavigate("deals")}/>
@@ -743,7 +773,6 @@ const Dashboard = ({data, profile, onNavigate}) => {
       </div>
 
       <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:16,marginBottom:16}}>
-        {/* Graf aktivity za 7 dní */}
         <div style={s.card}>
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14}}>
             <div style={{fontSize:11,fontWeight:700,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.5px"}}>Aktivita za 7 dní</div>
@@ -771,7 +800,6 @@ const Dashboard = ({data, profile, onNavigate}) => {
           </div>
         </div>
 
-        {/* Dnešní plán */}
         <div style={s.card}>
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
             <div style={{fontSize:11,fontWeight:700,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.5px"}}>
@@ -882,7 +910,7 @@ const Dashboard = ({data, profile, onNavigate}) => {
   );
 };
 
-// --- COMPANIES (REDESIGN B) ---
+// --- COMPANIES ---
 const Companies = ({data,ops,focusId,onClearFocus}) => {
   const [modal,setModal] = useState(null);
   const [gcalTask,setGcalTask] = useState(null);
@@ -908,8 +936,6 @@ const Companies = ({data,ops,focusId,onClearFocus}) => {
   if (dc) return (
     <div>
       <button onClick={()=>setDetail(null)} style={{...s.btn("ghost"),marginBottom:18}}>← Zpět na firmy</button>
-
-      {/* Hlavička firmy s avatarem a rychlými akcemi */}
       <div style={{...s.card,marginBottom:14}}>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",flexWrap:"wrap",gap:12}}>
           <div style={{display:"flex",gap:14,alignItems:"flex-start"}}>
@@ -938,9 +964,7 @@ const Companies = ({data,ops,focusId,onClearFocus}) => {
       </div>
 
       <div style={{display:"grid",gridTemplateColumns:"1fr 1.4fr",gap:14}}>
-        {/* Levý sloupec */}
         <div>
-          {/* Kontakty s avatary */}
           <div style={s.card}>
             <CardSectionHeader title="Kontaktní osoby" onAdd={()=>setModal("newContact")}/>
             {data.contacts.filter(ct=>ct.company_id===dc.id).map(ct=>(
@@ -962,7 +986,6 @@ const Companies = ({data,ops,focusId,onClearFocus}) => {
             {data.contacts.filter(ct=>ct.company_id===dc.id).length===0&&<div style={{fontSize:12,color:C.textDim,textAlign:"center",padding:"10px 0"}}>Žádné kontakty</div>}
           </div>
 
-          {/* Dealy */}
           <div style={s.card}>
             <CardSectionHeader title="Dealy" onAdd={()=>setModal("newDeal")}/>
             {data.deals.filter(d=>d.company_id===dc.id).map(d=>(
@@ -980,7 +1003,6 @@ const Companies = ({data,ops,focusId,onClearFocus}) => {
             {data.deals.filter(d=>d.company_id===dc.id).length===0&&<div style={{fontSize:12,color:C.textDim,textAlign:"center",padding:"10px 0"}}>Žádné dealy</div>}
           </div>
 
-          {/* Úkoly */}
           <div style={s.card}>
             <CardSectionHeader title="Úkoly" onAdd={()=>setModal("newTask")}/>
             {data.tasks.filter(t=>t.company_id===dc.id).map(t=>(
@@ -994,7 +1016,6 @@ const Companies = ({data,ops,focusId,onClearFocus}) => {
           </div>
         </div>
 
-        {/* Pravý sloupec — REDESIGN B: Timeline aktivity */}
         <div style={s.card}>
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}>
             <div style={{fontSize:14,fontWeight:700,color:C.text}}>Aktivita · timeline</div>
@@ -1059,21 +1080,6 @@ const Companies = ({data,ops,focusId,onClearFocus}) => {
     </div>
   );
 };
-  const [modal,setModal] = useState(null);
-  const [gcalTask,setGcalTask] = useState(null);
-  const [search,setSearch] = useState("");
-  const [filter,setFilter] = useState("Vše");
-  const [detail,setDetail] = useState(focusId||null);
-  useEffect(()=>{if(focusId){setDetail(focusId);onClearFocus&&onClearFocus();}}, [focusId]);
-  const companyNames = data.companies.map(c=>c.name);
-  const filtered = data.companies.filter(c=>{
-    const ms=c.name.toLowerCase().includes(search.toLowerCase())||(c.address||"").toLowerCase().includes(search.toLowerCase());
-    return ms&&(filter==="Vše"||c.status===filter);
-  });
-  const dc = data.companies.find(c=>c.id===detail);
-  const handleNoteAdd = async (text, type) => { await ops.upsertCompany({...dc, notes:[...(dc.notes||[]), {text, type, date:today()}]}); };
-  const handleNoteUpdate = async (idx, text, type) => { const notes=[...(dc.notes||[])]; notes[idx]={...notes[idx],text,type}; await ops.upsertCompany({...dc,notes}); };
-  const handleNoteDelete = async (idx) => { const notes=[...(dc.notes||[])]; notes.splice(idx,1); await ops.upsertCompany({...dc,notes}); };
 
 // --- CONTACTS ---
 const Contacts = ({data,ops,onNavigateToCompany}) => {
@@ -1261,13 +1267,35 @@ export default function App() {
   const [page, setPage] = useState("dashboard");
   const [focusId, setFocusId] = useState(null);
 
-  // Obnova session při načtení
+  // Obnova session při načtení — s automatickým refresh tokenem
   useEffect(() => {
     const stored = getStoredSession();
-    if (stored?.access_token) {
-      setSession(stored);
+    if (!stored?.access_token) {
+      setAuthLoading(false);
+      return;
     }
-    setAuthLoading(false);
+
+    if (isTokenExpired(stored)) {
+      // Token expiroval — zkus refresh
+      if (stored.refresh_token) {
+        refreshSession(stored.refresh_token)
+          .then(newSession => {
+            storeSession(newSession);
+            setSession(newSession);
+          })
+          .catch(() => {
+            // Refresh selhal — přihlásit znovu
+            storeSession(null);
+          })
+          .finally(() => setAuthLoading(false));
+      } else {
+        storeSession(null);
+        setAuthLoading(false);
+      }
+    } else {
+      setSession(stored);
+      setAuthLoading(false);
+    }
   }, []);
 
   // Načtení profilu po přihlášení
@@ -1279,7 +1307,6 @@ export default function App() {
         if (profiles.length > 0) {
           setProfile(profiles[0]);
         } else {
-          // Profil ještě neexistuje - vytvoříme ho
           const newProfile = {
             id: session.user.id,
             email: session.user.email,
@@ -1346,7 +1373,6 @@ export default function App() {
   const navigate = (p, id=null) => { setPage(p); setFocusId(id); };
   const overdueCount = data.tasks.filter(t=>isOverdue(t.date,t.status)).length;
 
-  // Loading
   if (authLoading) return (
     <div style={{minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",background:C.bg,fontFamily:"'Inter',system-ui,sans-serif"}}>
       <div style={{textAlign:"center"}}>
@@ -1357,7 +1383,6 @@ export default function App() {
     </div>
   );
 
-  // Login
   if (!session) return <LoginScreen onLogin={handleLogin}/>;
 
   return (
@@ -1373,7 +1398,6 @@ export default function App() {
         @keyframes spin{to{transform:rotate(360deg);}}
       `}</style>
 
-      {/* Navbar */}
       <div style={{position:"sticky",top:0,zIndex:100,background:C.white,borderBottom:`1px solid ${C.border}`,boxShadow:"0 1px 4px rgba(0,0,0,0.06)"}}>
         <div style={{maxWidth:1100,margin:"0 auto",padding:"0 20px",display:"flex",alignItems:"center",height:56,gap:10}}>
           <div style={{display:"flex",alignItems:"center",gap:8,marginRight:16}}>
@@ -1402,7 +1426,6 @@ export default function App() {
           </nav>
           <div style={{display:"flex",alignItems:"center",gap:8}}>
             <SyncBadge status={syncStatus}/>
-            {/* Uživatel info */}
             <div style={{display:"flex",alignItems:"center",gap:6,padding:"4px 10px",background:C.bg,borderRadius:8,border:`1px solid ${C.border}`}}>
               <div style={{width:22,height:22,borderRadius:"50%",background:profile?.role==="admin"?C.accentLight:C.bg,border:`1.5px solid ${profile?.role==="admin"?C.accent:C.border}`,display:"flex",alignItems:"center",justifyContent:"center"}}>
                 <Icon d={profile?.role==="admin"?Icons.shield:Icons.user} size={11} stroke={profile?.role==="admin"?C.accent:C.textMuted}/>
