@@ -3,7 +3,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 const SUPABASE_URL = "https://izkofzsnteymljqpflzm.supabase.co";
 const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml6a29menNudGV5bWxqcXBmbHptIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMyODQ3NTksImV4cCI6MjA4ODg2MDc1OX0.Q6hLlEoxsJv44hSNKCbRwhrD5FsXWKGJcxUYVISdeWM";
 
-// ── SUPABASE KLIENT ───────────────────────────────────────────────────────
+// --- SUPABASE KLIENT ---
 
 // REST API helper (pro data)
 const sb = async (path, opts = {}, token = null) => {
@@ -53,7 +53,7 @@ const storeSession = (s) => {
   else localStorage.removeItem("vzv_session");
 };
 
-// ── DESIGN SYSTEM ─────────────────────────────────────────────────────────
+// --- DESIGN SYSTEM ---
 const C = {
   bg: "#F4F5F7", surface: "#FFFFFF",
   border: "#E2E4E9",
@@ -162,7 +162,7 @@ const s = {
   label: { display:"block", fontSize:11, fontWeight:700, color:C.textMuted, marginBottom:4, letterSpacing:"0.5px", textTransform:"uppercase" },
 };
 
-// ── KOMPONENTY ────────────────────────────────────────────────────────────
+// --- KOMPONENTY ---
 const StatusBadge = ({status}) => <span style={s.badge(STATUS_COLORS[status]||C.textMuted)}>{status}</span>;
 const Field = ({label,children}) => <div style={{marginBottom:10}}><label style={s.label}>{label}</label>{children}</div>;
 const Input = (props) => <input style={inp} {...props}/>;
@@ -242,7 +242,7 @@ const Modal = ({title, onClose, children, onSave, saveLabel="Uložit", saveDisab
   </div>
 );
 
-// ── LOGIN OBRAZOVKA ───────────────────────────────────────────────────────
+// --- LOGIN OBRAZOVKA ---
 const LoginScreen = ({ onLogin }) => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -322,7 +322,7 @@ const LoginScreen = ({ onLogin }) => {
   );
 };
 
-// ── SPRÁVA UŽIVATELŮ (admin panel) ────────────────────────────────────────
+// --- SPRÁVA UŽIVATELŮ (admin panel) ---
 const UserManagement = ({ session, profiles, onRefresh }) => {
   const [modal, setModal] = useState(false);
   const [form, setForm] = useState({ email:"", password:"", full_name:"", role:"obchodnik", region:"Ústecký" });
@@ -415,7 +415,7 @@ const UserManagement = ({ session, profiles, onRefresh }) => {
   );
 };
 
-// ── GCAL ──────────────────────────────────────────────────────────────────
+// --- GCAL ---
 const gcalLink = (task, company, contact) => {
   const base = "https://calendar.google.com/calendar/render?action=TEMPLATE";
   const title = encodeURIComponent(`[VZV] ${task.title}${company?" – "+company.name:""}`);
@@ -583,7 +583,7 @@ const NoteEntry = ({notes=[], onAdd, onUpdate, onDelete}) => {
   );
 };
 
-// ── FORMS ─────────────────────────────────────────────────────────────────
+// --- FORMS ---
 const TaskFormFields = ({f, u, companies, contacts, profiles}) => {
   const rc = f.company_id ? contacts.filter(c=>c.company_id===f.company_id) : contacts;
   return (
@@ -675,7 +675,7 @@ const ContactModal = ({initial, companies, onSave, onClose}) => {
   return <Modal title={initial?.id?"Upravit kontakt":"Nový kontakt"} onClose={onClose} onSave={()=>f.name&&onSave(f)} saveLabel="Uložit kontakt" saveDisabled={!f.name}><ContactFormFields f={f} u={u} companies={companies}/></Modal>;
 };
 
-// ── DASHBOARD (REDESIGN A) ────────────────────────────────────────────────
+// --- DASHBOARD (REDESIGN A) ---
 const Dashboard = ({data, profile, onNavigate}) => {
   const {companies,contacts,deals,tasks,profiles} = data;
   const myTasks = tasks.filter(t=>t.owner_id===profile?.id||!t.owner_id);
@@ -882,7 +882,7 @@ const Dashboard = ({data, profile, onNavigate}) => {
   );
 };
 
-// ── COMPANIES (REDESIGN B) ────────────────────────────────────────────────
+// --- COMPANIES (REDESIGN B) ---
 const Companies = ({data,ops,focusId,onClearFocus}) => {
   const [modal,setModal] = useState(null);
   const [gcalTask,setGcalTask] = useState(null);
@@ -1075,7 +1075,7 @@ const Companies = ({data,ops,focusId,onClearFocus}) => {
   const handleNoteUpdate = async (idx, text, type) => { const notes=[...(dc.notes||[])]; notes[idx]={...notes[idx],text,type}; await ops.upsertCompany({...dc,notes}); };
   const handleNoteDelete = async (idx) => { const notes=[...(dc.notes||[])]; notes.splice(idx,1); await ops.upsertCompany({...dc,notes}); };
 
-// ── CONTACTS ──────────────────────────────────────────────────────────────
+// --- CONTACTS ---
 const Contacts = ({data,ops,onNavigateToCompany}) => {
   const [modal,setModal] = useState(null);
   const [search,setSearch] = useState("");
@@ -1121,7 +1121,7 @@ const Contacts = ({data,ops,onNavigateToCompany}) => {
   );
 };
 
-// ── DEALS ─────────────────────────────────────────────────────────────────
+// --- DEALS ---
 const Deals = ({data,ops}) => {
   const [modal,setModal] = useState(null);
   const [filter,setFilter] = useState("Vše");
@@ -1182,7 +1182,7 @@ const Deals = ({data,ops}) => {
   );
 };
 
-// ── TASKS ─────────────────────────────────────────────────────────────────
+// --- TASKS ---
 const Tasks = ({data,ops,profile}) => {
   const [modal,setModal] = useState(null);
   const [gcalTask,setGcalTask] = useState(null);
@@ -1243,7 +1243,7 @@ const Tasks = ({data,ops,profile}) => {
   );
 };
 
-// ── MAIN APP ──────────────────────────────────────────────────────────────
+// --- MAIN APP ---
 const NAV = [
   {id:"dashboard",label:"Přehled",icon:Icons.chart},
   {id:"companies",label:"Firmy",icon:Icons.building},
