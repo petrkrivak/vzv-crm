@@ -135,6 +135,12 @@ const today = () => new Date().toISOString().split("T")[0];
 const clean = (obj) => Object.fromEntries(Object.entries(obj).map(([k,v])=>[k, v===""?null:v]));
 const fmtDate = (d) => d ? new Date(d).toLocaleDateString("cs-CZ",{day:"2-digit",month:"2-digit",year:"numeric"}) : "—";
 const fmtMoney = (n) => n ? new Intl.NumberFormat("cs-CZ",{style:"currency",currency:"CZK",maximumFractionDigits:0}).format(n) : "—";
+const fmtMoneyShort = (n) => {
+  if (!n) return "—";
+  if (n >= 1000000) return `${Math.round(n/100000)/10} mil`;
+  if (n >= 1000) return `${Math.round(n/1000)} tis`;
+  return `${n}`;
+};
 const fmtDateShort = (d) => {
   if (!d) return "—";
   const date = new Date(d);
@@ -254,10 +260,16 @@ const AutocompleteInput = ({ value, onChange, suggestions, placeholder }) => {
   );
 };
 
-const Modal = ({title, onClose, children, onSave, saveLabel="Uložit", saveDisabled}) => (
-  <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.5)",zIndex:1000,display:"flex",alignItems:"flex-end",justifyContent:"center"}}
+const Modal = ({title, onClose, children, onSave, saveLabel="Uložit", saveDisabled}) => {
+  useEffect(() => {
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => { document.body.style.overflow = prev; };
+  }, []);
+  return (
+  <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.5)",zIndex:1000,display:"flex",alignItems:"flex-end",justifyContent:"center",overscrollBehavior:"none"}}
     onClick={e=>e.target===e.currentTarget&&onClose()}>
-    <div style={{background:C.white,borderRadius:"20px 20px 0 0",width:"100%",maxWidth:600,maxHeight:"92vh",display:"flex",flexDirection:"column",boxShadow:"0 -4px 32px rgba(0,0,0,0.15)"}}>
+    <div style={{background:C.white,borderRadius:"20px 20px 0 0",width:"100%",maxWidth:600,maxHeight:"92vh",display:"flex",flexDirection:"column",boxShadow:"0 -4px 32px rgba(0,0,0,0.15)",overscrollBehavior:"contain"}}>
       <div style={{padding:"12px 20px 0",flexShrink:0}}>
         <div style={{width:40,height:4,borderRadius:2,background:C.border,margin:"0 auto 12px"}}/>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14,paddingBottom:12,borderBottom:`1px solid ${C.border}`}}>
@@ -278,7 +290,8 @@ const Modal = ({title, onClose, children, onSave, saveLabel="Uložit", saveDisab
       {!onSave && <div style={{height:20,flexShrink:0}}/>}
     </div>
   </div>
-);
+  );
+};
 
 // --- LOGIN OBRAZOVKA ---
 const LoginScreen = ({ onLogin }) => {
@@ -735,7 +748,7 @@ const Dashboard = ({data, profile, onNavigate}) => {
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}>
         <div>
           <div style={{fontSize:11,fontWeight:700,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.5px",marginBottom:6}}>{label}</div>
-          <div style={{fontSize:22,fontWeight:800,color:C.text}}>{value}</div>
+          <div style={{fontSize:20,fontWeight:800,color:C.text,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{value}</div>
           {sub&&<div style={{fontSize:11,color:C.textDim,marginTop:3}}>{sub}</div>}
         </div>
         <div style={{background:`${color}15`,borderRadius:8,padding:8,color}}><Icon d={icon} size={18}/></div>
@@ -753,8 +766,8 @@ const Dashboard = ({data, profile, onNavigate}) => {
 
       <div style={{display:"flex",gap:12,flexWrap:"wrap",marginBottom:16}}>
         <Stat icon={Icons.building} label="Firmy" value={companies.length} sub={`${companies.filter(c=>c.status==="Zákazník").length} zákazníků`} color={C.info} onClick={()=>onNavigate("companies")}/>
-        <Stat icon={Icons.target} label="Pipeline" value={fmtMoney(pipeline)} sub={`${activeDeals.length} příležitostí`} color={C.accent} onClick={()=>onNavigate("deals")}/>
-        <Stat icon={Icons.check} label="Vyhráno" value={fmtMoney(won)} sub={`${deals.filter(d=>d.status==="Vyhráno").length} dealů`} color={C.success}/>
+        <Stat icon={Icons.target} label="Pipeline" value={fmtMoneyShort(pipeline)} sub={`${activeDeals.length} příležitostí`} color={C.accent} onClick={()=>onNavigate("deals")}/>
+        <Stat icon={Icons.check} label="Vyhráno" value={fmtMoneyShort(won)} sub={`${deals.filter(d=>d.status==="Vyhráno").length} dealů`} color={C.success}/>
         <Stat icon={Icons.clock} label="Po termínu" value={overdue.length} sub={overdue.length>0?"nutná akce":"vše v pořádku"} color={overdue.length>0?C.danger:C.success} onClick={()=>onNavigate("tasks")}/>
       </div>
 
