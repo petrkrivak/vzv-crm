@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 
 const SUPABASE_URL = "https://izkofzsnteymljqpflzm.supabase.co";
-const SUPABASE_KEY = "sb_publishable_fbk306J2PD4rRYNPGNaFxQ_TCjw_2h9";
+const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml6a29menNudGV5bWxqcXBmbHptIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMyODQ3NTksImV4cCI6MjA4ODg2MDc1OX0.Q6hLlEoxsJv44hSNKCbRwhrD5FsXWKGJcxUYVISdeWM";
 
 // ── SUPABASE KLIENT ───────────────────────────────────────────────────────
 
