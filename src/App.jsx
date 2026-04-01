@@ -3,7 +3,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 const SUPABASE_URL = "https://izkofzsnteymljqpflzm.supabase.co";
 const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml6a29menNudGV5bWxqcXBmbHptIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMyODQ3NTksImV4cCI6MjA4ODg2MDc1OX0.Q6hLlEoxsJv44hSNKCbRwhrD5FsXWKGJcxUYVISdeWM";
 
-// --- SUPABASE KLIENT ---
+// ── SUPABASE KLIENT ───────────────────────────────────────────────────────
 
 // REST API helper (pro data)
 const sb = async (path, opts = {}, token = null) => {
@@ -53,7 +53,7 @@ const storeSession = (s) => {
   else localStorage.removeItem("vzv_session");
 };
 
-// --- DESIGN SYSTEM ---
+// ── DESIGN SYSTEM ─────────────────────────────────────────────────────────
 const C = {
   bg: "#F4F5F7", surface: "#FFFFFF",
   border: "#E2E4E9",
@@ -97,16 +97,6 @@ const today = () => new Date().toISOString().split("T")[0];
 const clean = (obj) => Object.fromEntries(Object.entries(obj).map(([k,v])=>[k, v===""?null:v]));
 const fmtDate = (d) => d ? new Date(d).toLocaleDateString("cs-CZ",{day:"2-digit",month:"2-digit",year:"numeric"}) : "—";
 const fmtMoney = (n) => n ? new Intl.NumberFormat("cs-CZ",{style:"currency",currency:"CZK",maximumFractionDigits:0}).format(n) : "—";
-const fmtDateShort = (d) => {
-  if (!d) return "—";
-  const date = new Date(d);
-  const now = new Date();
-  const diff = Math.floor((now - date) / 86400000);
-  if (diff === 0) return "dnes";
-  if (diff === 1) return "včera";
-  if (diff < 7) return `${diff} dní`;
-  return date.toLocaleDateString("cs-CZ",{day:"2-digit",month:"2-digit"});
-};
 const isOverdue = (date,status) => date && !["Dokončeno","Zrušeno","Vyhráno","Prohráno"].includes(status) && new Date(date) < new Date(today());
 
 const Icon = ({ d, size=18, stroke="currentColor", fill="none" }) => (
@@ -162,7 +152,7 @@ const s = {
   label: { display:"block", fontSize:11, fontWeight:700, color:C.textMuted, marginBottom:4, letterSpacing:"0.5px", textTransform:"uppercase" },
 };
 
-// --- KOMPONENTY ---
+// ── KOMPONENTY ────────────────────────────────────────────────────────────
 const StatusBadge = ({status}) => <span style={s.badge(STATUS_COLORS[status]||C.textMuted)}>{status}</span>;
 const Field = ({label,children}) => <div style={{marginBottom:10}}><label style={s.label}>{label}</label>{children}</div>;
 const Input = (props) => <input style={inp} {...props}/>;
@@ -242,7 +232,7 @@ const Modal = ({title, onClose, children, onSave, saveLabel="Uložit", saveDisab
   </div>
 );
 
-// --- LOGIN OBRAZOVKA ---
+// ── LOGIN OBRAZOVKA ───────────────────────────────────────────────────────
 const LoginScreen = ({ onLogin }) => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -322,7 +312,7 @@ const LoginScreen = ({ onLogin }) => {
   );
 };
 
-// --- SPRÁVA UŽIVATELŮ (admin panel) ---
+// ── SPRÁVA UŽIVATELŮ (admin panel) ────────────────────────────────────────
 const UserManagement = ({ session, profiles, onRefresh }) => {
   const [modal, setModal] = useState(false);
   const [form, setForm] = useState({ email:"", password:"", full_name:"", role:"obchodnik", region:"Ústecký" });
@@ -415,7 +405,7 @@ const UserManagement = ({ session, profiles, onRefresh }) => {
   );
 };
 
-// --- GCAL ---
+// ── GCAL ──────────────────────────────────────────────────────────────────
 const gcalLink = (task, company, contact) => {
   const base = "https://calendar.google.com/calendar/render?action=TEMPLATE";
   const title = encodeURIComponent(`[VZV] ${task.title}${company?" – "+company.name:""}`);
@@ -583,7 +573,7 @@ const NoteEntry = ({notes=[], onAdd, onUpdate, onDelete}) => {
   );
 };
 
-// --- FORMS ---
+// ── FORMS ─────────────────────────────────────────────────────────────────
 const TaskFormFields = ({f, u, companies, contacts, profiles}) => {
   const rc = f.company_id ? contacts.filter(c=>c.company_id===f.company_id) : contacts;
   return (
@@ -675,7 +665,7 @@ const ContactModal = ({initial, companies, onSave, onClose}) => {
   return <Modal title={initial?.id?"Upravit kontakt":"Nový kontakt"} onClose={onClose} onSave={()=>f.name&&onSave(f)} saveLabel="Uložit kontakt" saveDisabled={!f.name}><ContactFormFields f={f} u={u} companies={companies}/></Modal>;
 };
 
-// --- DASHBOARD (REDESIGN A) ---
+// ── DASHBOARD ─────────────────────────────────────────────────────────────
 const Dashboard = ({data, profile, onNavigate}) => {
   const {companies,contacts,deals,tasks,profiles} = data;
   const myTasks = tasks.filter(t=>t.owner_id===profile?.id||!t.owner_id);
@@ -683,17 +673,7 @@ const Dashboard = ({data, profile, onNavigate}) => {
   const pipeline = activeDeals.reduce((s,d)=>s+(d.value||0),0);
   const won = deals.filter(d=>d.status==="Vyhráno").reduce((s,d)=>s+(d.value||0),0);
   const overdue = myTasks.filter(t=>isOverdue(t.date,t.status));
-  const todayTasks = myTasks.filter(t=>t.date===today()&&["Plánováno","Probíhá"].includes(t.status)).sort((a,b)=>(a.time||"").localeCompare(b.time||""));
-  const upcoming = myTasks.filter(t=>t.status==="Plánováno"&&t.date>today()).sort((a,b)=>(a.date||"").localeCompare(b.date||""));
-
-  // Graf aktivity — počty poznámek za posledních 7 dní
-  const days = Array.from({length:7},(_,i)=>{ const d=new Date(); d.setDate(d.getDate()-6+i); return d.toISOString().split("T")[0]; });
-  const dayLabels = Array.from({length:7},(_,i)=>{ const d=new Date(); d.setDate(d.getDate()-6+i); return ["Ne","Po","Út","St","Čt","Pá","So"][d.getDay()]; });
-  const activityByDay = days.map(day=>companies.reduce((acc,c)=>acc+(c.notes||[]).filter(n=>n.date===day).length,0));
-  const maxActivity = Math.max(...activityByDay,1);
-  const totalActivity = activityByDay.reduce((a,b)=>a+b,0);
-
-  const firstName = profile?.full_name?.split(" ")[0] || "obchodníku";
+  const upcoming = myTasks.filter(t=>t.status==="Plánováno").sort((a,b)=>(a.date||"").localeCompare(b.date||""));
 
   const Stat = ({icon,label,value,sub,color,onClick}) => (
     <div onClick={onClick} style={{background:C.white,border:`1px solid ${C.border}`,borderRadius:12,padding:"18px 20px",flex:1,minWidth:140,cursor:onClick?"pointer":"default",borderTop:`3px solid ${color}`,boxShadow:"0 1px 4px rgba(0,0,0,0.06)",transition:"all 0.2s"}}
@@ -710,355 +690,83 @@ const Dashboard = ({data, profile, onNavigate}) => {
     </div>
   );
 
+  const firstName = profile?.full_name?.split(" ")[0] || "obchodníku";
+
   return (
     <div>
-      {/* Hlavička s rychlými akcemi */}
-      <div style={{marginBottom:16,padding:"20px 24px",background:C.white,borderRadius:12,border:`1px solid ${C.border}`,boxShadow:"0 1px 4px rgba(0,0,0,0.06)"}}>
+      <div style={{marginBottom:24,padding:"20px 24px",background:C.white,borderRadius:12,border:`1px solid ${C.border}`,boxShadow:"0 1px 4px rgba(0,0,0,0.06)"}}>
         <div style={{fontSize:11,color:C.textDim,marginBottom:3,fontWeight:500}}>{new Date().toLocaleDateString("cs-CZ",{weekday:"long",year:"numeric",month:"long",day:"numeric"})}</div>
         <h1 style={{margin:0,fontSize:24,fontWeight:800,color:C.text}}>Dobrý den, {firstName} 👋</h1>
-        <p style={{margin:"4px 0 14px",color:C.textMuted,fontSize:13}}>Přehled VZV pipeline · VIVA Lovosice{profile?.region?` · ${profile.region} region`:""}</p>
-        {/* Rychlé akce */}
-        <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
-          {[
-            {label:"+ Nová firma",color:C.accent,bg:C.accentLight,page:"companies"},
-            {label:"+ Nový deal",color:C.info,bg:"#EFF6FF",page:"deals"},
-            {label:"+ Úkol",color:C.warning,bg:"#FFFBEB",page:"tasks"},
-            {label:"+ Kontakt",color:C.purple,bg:"#F5F3FF",page:"contacts"},
-          ].map(({label,color,bg,page})=>(
-            <button key={label} onClick={()=>onNavigate(page,"new")}
-              style={{padding:"7px 14px",borderRadius:8,border:`1px solid ${color}30`,background:bg,color,fontSize:12,fontWeight:600,cursor:"pointer",transition:"all 0.15s"}}
-              onMouseEnter={e=>{e.currentTarget.style.background=color;e.currentTarget.style.color=C.white;}}
-              onMouseLeave={e=>{e.currentTarget.style.background=bg;e.currentTarget.style.color=color;}}
-            >{label}</button>
-          ))}
-        </div>
+        <p style={{margin:"4px 0 0",color:C.textMuted,fontSize:13}}>Přehled VZV pipeline · VIVA Lovosice{profile?.region?` · ${profile.region} region`:""}</p>
       </div>
-
-      {/* Statistiky */}
-      <div style={{display:"flex",gap:12,flexWrap:"wrap",marginBottom:16}}>
+      <div style={{display:"flex",gap:12,flexWrap:"wrap",marginBottom:20}}>
         <Stat icon={Icons.building} label="Firmy" value={companies.length} sub={`${companies.filter(c=>c.status==="Zákazník").length} zákazníků`} color={C.info} onClick={()=>onNavigate("companies")}/>
         <Stat icon={Icons.target} label="Pipeline" value={fmtMoney(pipeline)} sub={`${activeDeals.length} příležitostí`} color={C.accent} onClick={()=>onNavigate("deals")}/>
         <Stat icon={Icons.check} label="Vyhráno" value={fmtMoney(won)} sub={`${deals.filter(d=>d.status==="Vyhráno").length} dealů`} color={C.success}/>
         <Stat icon={Icons.clock} label="Po termínu" value={overdue.length} sub={overdue.length>0?"nutná akce":"vše v pořádku"} color={overdue.length>0?C.danger:C.success} onClick={()=>onNavigate("tasks")}/>
       </div>
-
-      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:16,marginBottom:16}}>
-        {/* Graf aktivity za 7 dní */}
-        <div style={s.card}>
-          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14}}>
-            <div style={{fontSize:11,fontWeight:700,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.5px"}}>Aktivita za 7 dní</div>
-            <div style={{fontSize:11,color:C.textDim}}>poznámky z terénu</div>
-          </div>
-          <div style={{display:"flex",alignItems:"flex-end",gap:6,height:64,marginBottom:8}}>
-            {activityByDay.map((count,i)=>{
-              const isToday = i===6;
-              const height = count===0 ? 4 : Math.max(8,Math.round((count/maxActivity)*60));
-              return (
-                <div key={i} style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",gap:3}}>
-                  <div style={{width:"100%",height,background:isToday?C.accent:count===0?C.bg:`${C.accent}55`,borderRadius:"3px 3px 0 0",position:"relative"}}>
-                    {count>0&&<div style={{position:"absolute",top:-16,left:"50%",transform:"translateX(-50%)",fontSize:10,fontWeight:700,color:isToday?C.accent:C.textMuted}}>{count}</div>}
-                  </div>
-                  <div style={{fontSize:10,color:isToday?C.accent:C.textDim,fontWeight:isToday?700:400}}>{dayLabels[i]}</div>
-                </div>
-              );
-            })}
-          </div>
-          <div style={{borderTop:`1px solid ${C.border}`,paddingTop:10,display:"flex",alignItems:"center",gap:10}}>
-            <div style={{fontSize:11,color:C.textMuted,flexShrink:0}}>Týdenní cíl: <strong>{totalActivity}/10</strong></div>
-            <div style={{flex:1,background:C.bg,borderRadius:3,height:5}}>
-              <div style={{width:`${Math.min(100,totalActivity/10*100)}%`,background:C.accent,height:"100%",borderRadius:3}}/>
-            </div>
-          </div>
-        </div>
-
-        {/* Dnešní plán */}
-        <div style={s.card}>
-          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
-            <div style={{fontSize:11,fontWeight:700,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.5px"}}>
-              Dnes{todayTasks.length>0?` · ${todayTasks.length} úkolů`:""}
-            </div>
-            <button onClick={()=>onNavigate("tasks")} style={{fontSize:11,color:C.accent,background:"none",border:"none",cursor:"pointer",fontWeight:600}}>Vše →</button>
-          </div>
-          {overdue.slice(0,2).map(t=>{
-            const company=companies.find(c=>c.id===t.company_id);
-            return (
-              <div key={t.id} style={{display:"flex",alignItems:"center",gap:8,padding:"7px 10px",background:"#FEF2F2",borderRadius:8,marginBottom:6,borderLeft:`3px solid ${C.danger}`}}>
-                <div style={{fontSize:11,color:C.danger,fontWeight:700,minWidth:28}}>⚠</div>
-                <div style={{flex:1,minWidth:0}}>
-                  <div style={{fontSize:12,color:C.danger,fontWeight:500,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{t.title}</div>
-                  <div style={{fontSize:10,color:`${C.danger}99`}}>{company?.name} · {fmtDate(t.date)}</div>
-                </div>
-              </div>
-            );
-          })}
-          {todayTasks.length===0&&overdue.length===0&&<div style={{textAlign:"center",padding:"12px 0",color:C.textDim,fontSize:13}}>Žádné úkoly na dnes 🎉</div>}
-          {todayTasks.map(t=>{
-            const company=companies.find(c=>c.id===t.company_id);
-            const typeColors={Telefonát:C.warning,Návštěva:C.accent,"E-mail":C.info,Nabídka:C.purple};
-            return (
-              <div key={t.id} style={{display:"flex",alignItems:"center",gap:8,padding:"7px 10px",background:C.bg,borderRadius:8,marginBottom:5,borderLeft:`3px solid ${typeColors[t.type]||C.border}`}}>
-                <div style={{fontSize:11,color:C.textDim,minWidth:36,fontWeight:500}}>{t.time||"—"}</div>
-                <div style={{flex:1,minWidth:0}}>
-                  <div style={{fontSize:12,color:C.text,fontWeight:500,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{t.title}</div>
-                  <div style={{fontSize:10,color:C.textDim}}>{company?.name}</div>
-                </div>
-                <span style={{...s.badge(typeColors[t.type]||C.textDim),fontSize:10,padding:"1px 6px"}}>{t.type}</span>
-              </div>
-            );
-          })}
-          {upcoming.slice(0,3).map(t=>{
-            const company=companies.find(c=>c.id===t.company_id);
-            return (
-              <div key={t.id} style={{display:"flex",alignItems:"center",gap:8,padding:"6px 0",borderTop:`1px solid ${C.border}`}}>
-                <div style={{width:6,height:6,borderRadius:3,background:C.accent,flexShrink:0}}/>
-                <div style={{flex:1,fontSize:12,color:C.text,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{t.title}</div>
-                <div style={{fontSize:11,color:C.textDim,flexShrink:0}}>{fmtDate(t.date)}</div>
-              </div>
-            );
-          })}
-        </div>
-      </div>
-
       <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:16,marginBottom:16}}>
         <div style={s.card}>
           <div style={{fontSize:11,fontWeight:700,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.5px",marginBottom:14}}>Pipeline po fázích</div>
           {["Identifikováno","Nabídka odeslána","Jednání"].map(stage=>{
             const items=deals.filter(d=>d.status===stage);
-            const val=items.reduce((s,d)=>s+(d.value||0),0);
-            const maxVal=Math.max(...["Identifikováno","Nabídka odeslána","Jednání"].map(st=>deals.filter(d=>d.status===st).reduce((s,d)=>s+(d.value||0),0)),1);
             return (
-              <div key={stage} style={{marginBottom:14}}>
-                <div style={{display:"flex",justifyContent:"space-between",marginBottom:5}}>
+              <div key={stage} style={{marginBottom:12}}>
+                <div style={{display:"flex",justifyContent:"space-between",marginBottom:4}}>
                   <span style={{fontSize:12,color:C.text,fontWeight:500}}>{stage}</span>
-                  <span style={{fontSize:12,fontWeight:700,color:C.accent}}>{items.length>0?fmtMoney(val):"—"}</span>
+                  <span style={{fontSize:12,fontWeight:700,color:C.accent}}>{items.length>0?fmtMoney(items.reduce((s,d)=>s+(d.value||0),0)):"—"}</span>
                 </div>
-                <div style={{height:6,background:C.bg,borderRadius:3}}><div style={{height:"100%",width:`${val/maxVal*100}%`,background:STATUS_COLORS[stage],borderRadius:3}}/></div>
-                <div style={{fontSize:10,color:C.textDim,marginTop:3}}>{items.length} příležitostí</div>
+                <div style={{height:5,background:C.bg,borderRadius:3}}><div style={{height:"100%",width:`${Math.min(100,items.length*30)}%`,background:STATUS_COLORS[stage],borderRadius:3}}/></div>
               </div>
             );
           })}
         </div>
-
-        {profile?.role==="admin" && profiles.length > 0 ? (
-          <div style={s.card}>
-            <div style={{fontSize:11,fontWeight:700,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.5px",marginBottom:14}}>Tým · aktivita</div>
+        <div style={s.card}>
+          <div style={{fontSize:11,fontWeight:700,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.5px",marginBottom:14}}>Moje nejbližší úkoly</div>
+          {upcoming.slice(0,5).map(t=>{
+            const company=companies.find(c=>c.id===t.company_id);
+            const od=isOverdue(t.date,t.status);
+            return (
+              <div key={t.id} style={{display:"flex",gap:8,alignItems:"flex-start",marginBottom:10,paddingBottom:10,borderBottom:`1px solid ${C.border}`}}>
+                <div style={{width:6,height:6,borderRadius:3,background:od?C.danger:C.accent,marginTop:4,flexShrink:0}}/>
+                <div style={{flex:1,minWidth:0}}>
+                  <div style={{fontSize:13,color:od?C.danger:C.text,fontWeight:500,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{t.title}</div>
+                  <div style={{fontSize:11,color:C.textDim}}>{company?.name} · {fmtDate(t.date)}{t.time?` · ${t.time}`:""}</div>
+                </div>
+                <span style={s.badge(od?C.danger:C.info)}>{t.type}</span>
+              </div>
+            );
+          })}
+          {upcoming.length===0&&<div style={{fontSize:13,color:C.textDim}}>Žádné naplánované úkoly</div>}
+        </div>
+      </div>
+      {profile?.role==="admin" && profiles.length > 0 && (
+        <div style={s.card}>
+          <div style={{fontSize:11,fontWeight:700,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.5px",marginBottom:14}}>Tým · aktivita</div>
+          <div style={{display:"flex",gap:10,flexWrap:"wrap"}}>
             {profiles.map(p=>{
-              const pTasks=tasks.filter(t=>t.owner_id===p.id&&["Plánováno","Probíhá"].includes(t.status));
-              const pDeals=deals.filter(d=>d.created_by===p.id&&!["Vyhráno","Prohráno"].includes(d.status));
+              const pTasks = tasks.filter(t=>t.owner_id===p.id&&["Plánováno","Probíhá"].includes(t.status));
+              const pDeals = deals.filter(d=>d.created_by===p.id&&!["Vyhráno","Prohráno"].includes(d.status));
               return (
-                <div key={p.id} style={{display:"flex",alignItems:"center",gap:10,padding:"10px 0",borderBottom:`1px solid ${C.border}`}}>
-                  <div style={{width:32,height:32,borderRadius:"50%",background:C.accentLight,display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,fontWeight:700,color:C.accent,flexShrink:0}}>
-                    {(p.full_name||p.email||"?")[0].toUpperCase()}
-                  </div>
-                  <div style={{flex:1}}>
-                    <div style={{fontSize:13,fontWeight:600,color:C.text}}>{p.full_name||p.email}</div>
-                    <div style={{fontSize:11,color:C.textDim}}>{p.region||"—"}</div>
-                  </div>
-                  <div style={{display:"flex",gap:6}}>
-                    <span style={s.badge(C.info)}>{pTasks.length} úk.</span>
-                    <span style={s.badge(C.accent)}>{pDeals.length} d.</span>
+                <div key={p.id} style={{background:C.bg,border:`1px solid ${C.border}`,borderRadius:10,padding:"12px 16px",flex:"1 1 160px"}}>
+                  <div style={{fontSize:13,fontWeight:700,color:C.text}}>{p.full_name||p.email}</div>
+                  <div style={{fontSize:11,color:C.textDim,marginBottom:6}}>{p.region||"—"}</div>
+                  <div style={{display:"flex",gap:8}}>
+                    <span style={s.badge(C.info)}>{pTasks.length} úkolů</span>
+                    <span style={s.badge(C.accent)}>{pDeals.length} dealů</span>
                   </div>
                 </div>
               );
             })}
           </div>
-        ) : (
-          <div style={s.card}>
-            <div style={{fontSize:11,fontWeight:700,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.5px",marginBottom:14}}>Aktivní firmy</div>
-            {companies.filter(c=>["Aktivní jednání","Oslovený"].includes(c.status)).slice(0,5).map(c=>(
-              <div key={c.id} onClick={()=>onNavigate("companies",c.id)} style={{display:"flex",alignItems:"center",gap:10,padding:"8px 0",borderBottom:`1px solid ${C.border}`,cursor:"pointer"}}
-                onMouseEnter={e=>e.currentTarget.querySelector&&(e.currentTarget.style.background=C.accentLight)}
-                onMouseLeave={e=>e.currentTarget.querySelector&&(e.currentTarget.style.background="transparent")}>
-                <div style={{width:8,height:8,borderRadius:"50%",background:STATUS_COLORS[c.status],flexShrink:0}}/>
-                <div style={{flex:1,fontSize:13,fontWeight:500,color:C.text,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{c.name}</div>
-                <StatusBadge status={c.status}/>
-              </div>
-            ))}
-            {companies.filter(c=>["Aktivní jednání","Oslovený"].includes(c.status)).length===0&&<div style={{fontSize:13,color:C.textDim}}>Žádné aktivní firmy</div>}
-          </div>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   );
 };
 
-// --- COMPANIES (REDESIGN B) ---
+// ── COMPANIES (beze změny logiky, přidán token) ───────────────────────────
 const Companies = ({data,ops,focusId,onClearFocus}) => {
-  const [modal,setModal] = useState(null);
-  const [gcalTask,setGcalTask] = useState(null);
-  const [search,setSearch] = useState("");
-  const [filter,setFilter] = useState("Vše");
-  const [detail,setDetail] = useState(focusId&&focusId!=="new"?focusId:null);
-  useEffect(()=>{
-    if(focusId&&focusId!=="new"){setDetail(focusId);onClearFocus&&onClearFocus();}
-    else if(focusId==="new"){setModal("new");onClearFocus&&onClearFocus();}
-  }, [focusId]);
-
-  const companyNames = data.companies.map(c=>c.name);
-  const filtered = data.companies.filter(c=>{
-    const ms=c.name.toLowerCase().includes(search.toLowerCase())||(c.address||"").toLowerCase().includes(search.toLowerCase());
-    return ms&&(filter==="Vše"||c.status===filter);
-  });
-  const dc = data.companies.find(c=>c.id===detail);
-  const handleNoteAdd = async (text, type) => { await ops.upsertCompany({...dc, notes:[...(dc.notes||[]), {text, type, date:today()}]}); };
-  const handleNoteUpdate = async (idx, text, type) => { const notes=[...(dc.notes||[])]; notes[idx]={...notes[idx],text,type}; await ops.upsertCompany({...dc,notes}); };
-  const handleNoteDelete = async (idx) => { const notes=[...(dc.notes||[])]; notes.splice(idx,1); await ops.upsertCompany({...dc,notes}); };
-  const initials = (name) => name ? name.split(" ").slice(0,2).map(w=>w[0]).join("").toUpperCase() : "?";
-
-  if (dc) return (
-    <div>
-      <button onClick={()=>setDetail(null)} style={{...s.btn("ghost"),marginBottom:18}}>← Zpět na firmy</button>
-
-      {/* Hlavička firmy s avatarem a rychlými akcemi */}
-      <div style={{...s.card,marginBottom:14}}>
-        <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",flexWrap:"wrap",gap:12}}>
-          <div style={{display:"flex",gap:14,alignItems:"flex-start"}}>
-            <div style={{width:52,height:52,borderRadius:12,background:C.accentLight,border:`1px solid ${C.border}`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:18,fontWeight:700,color:C.accent,flexShrink:0}}>
-              {initials(dc.name)}
-            </div>
-            <div>
-              <h1 style={{margin:0,fontSize:20,fontWeight:800,color:C.text}}>{dc.name}</h1>
-              <div style={{marginTop:5,display:"flex",gap:6,flexWrap:"wrap",alignItems:"center"}}>
-                <StatusBadge status={dc.status}/>
-                {dc.industry&&<span style={{fontSize:12,color:C.textMuted}}>{dc.industry}</span>}
-                {dc.fleet>0&&<span style={{fontSize:12,color:C.textMuted}}>· {dc.fleet} VZV</span>}
-                {dc.competitor&&<span style={{fontSize:12,color:C.textDim}}>· vs. {dc.competitor}</span>}
-                {dc.address&&<span style={{fontSize:12,color:C.textDim}}>· {dc.address}</span>}
-                {dc.ico&&<span style={{fontSize:12,color:C.textDim}}>· IČO: {dc.ico}</span>}
-              </div>
-            </div>
-          </div>
-          <div style={{display:"flex",gap:6,flexShrink:0,flexWrap:"wrap"}}>
-            <button onClick={()=>setModal("newTask")} style={{...s.btn("primary"),padding:"7px 14px",fontSize:12}}><Icon d={Icons.plus} size={12}/>Úkol</button>
-            <button onClick={()=>setModal("newDeal")} style={{...s.btn("ghost"),padding:"7px 14px",fontSize:12}}><Icon d={Icons.target} size={12}/>Deal</button>
-            <button onClick={()=>setModal("edit")} style={{...s.btn("ghost"),padding:"7px 14px",fontSize:12}}><Icon d={Icons.edit} size={12}/>Upravit</button>
-            <button onClick={async()=>{await ops.deleteCompany(dc.id);setDetail(null);}} style={{...s.btn("danger"),padding:"7px 10px",fontSize:12}}><Icon d={Icons.trash} size={12}/></button>
-          </div>
-        </div>
-      </div>
-
-      <div style={{display:"grid",gridTemplateColumns:"1fr 1.4fr",gap:14}}>
-        {/* Levý sloupec */}
-        <div>
-          {/* Kontakty s avatary */}
-          <div style={s.card}>
-            <CardSectionHeader title="Kontaktní osoby" onAdd={()=>setModal("newContact")}/>
-            {data.contacts.filter(ct=>ct.company_id===dc.id).map(ct=>(
-              <div key={ct.id} style={{display:"flex",gap:10,alignItems:"flex-start",padding:"10px 0",borderBottom:`1px solid ${C.border}`}}>
-                <div style={{width:34,height:34,borderRadius:"50%",background:C.bg,display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,fontWeight:700,color:C.textMuted,flexShrink:0,border:`1px solid ${C.border}`}}>
-                  {(ct.name||"?").split(" ").slice(0,2).map(w=>w[0]).join("").toUpperCase()}
-                </div>
-                <div style={{flex:1,minWidth:0}}>
-                  <div style={{fontWeight:600,fontSize:13,color:C.text}}>{ct.name}</div>
-                  <div style={{fontSize:11,color:C.textMuted,marginBottom:4}}>{ct.position} · <span style={s.badge(C.purple)}>{ct.role}</span></div>
-                  <div style={{display:"flex",gap:10,flexWrap:"wrap"}}>
-                    {ct.phone&&<a href={`tel:${ct.phone}`} style={{fontSize:12,color:C.accent,display:"flex",gap:3,alignItems:"center",textDecoration:"none",fontWeight:500}}><Icon d={Icons.phone} size={11}/>{ct.phone}</a>}
-                    {ct.email&&<a href={`mailto:${ct.email}`} style={{fontSize:12,color:C.info,display:"flex",gap:3,alignItems:"center",textDecoration:"none"}}><Icon d={Icons.mail} size={11}/>{ct.email}</a>}
-                  </div>
-                  {ct.personal_note&&<div style={{fontSize:11,color:"#92610a",marginTop:5,background:C.yellowLight,padding:"4px 8px",borderRadius:5,border:`1px solid ${C.yellow}40`}}>😊 {ct.personal_note}</div>}
-                </div>
-              </div>
-            ))}
-            {data.contacts.filter(ct=>ct.company_id===dc.id).length===0&&<div style={{fontSize:12,color:C.textDim,textAlign:"center",padding:"10px 0"}}>Žádné kontakty</div>}
-          </div>
-
-          {/* Dealy */}
-          <div style={s.card}>
-            <CardSectionHeader title="Dealy" onAdd={()=>setModal("newDeal")}/>
-            {data.deals.filter(d=>d.company_id===dc.id).map(d=>(
-              <div key={d.id} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"8px 0",borderBottom:`1px solid ${C.border}`}}>
-                <div>
-                  <div style={{fontSize:13,color:C.text,fontWeight:500}}>{d.title}</div>
-                  <div style={{fontSize:11,color:C.textDim}}>{d.type}</div>
-                </div>
-                <div style={{textAlign:"right"}}>
-                  <div style={{fontSize:13,fontWeight:700,color:C.accent}}>{fmtMoney(d.value)}</div>
-                  <StatusBadge status={d.status}/>
-                </div>
-              </div>
-            ))}
-            {data.deals.filter(d=>d.company_id===dc.id).length===0&&<div style={{fontSize:12,color:C.textDim,textAlign:"center",padding:"10px 0"}}>Žádné dealy</div>}
-          </div>
-
-          {/* Úkoly */}
-          <div style={s.card}>
-            <CardSectionHeader title="Úkoly" onAdd={()=>setModal("newTask")}/>
-            {data.tasks.filter(t=>t.company_id===dc.id).map(t=>(
-              <div key={t.id} style={{display:"flex",gap:8,alignItems:"center",padding:"7px 0",borderBottom:`1px solid ${C.border}`}}>
-                <div style={{width:6,height:6,borderRadius:3,background:STATUS_COLORS[t.status],flexShrink:0}}/>
-                <div style={{flex:1}}><div style={{fontSize:12,color:C.text,fontWeight:500}}>{t.title}</div><div style={{fontSize:10,color:C.textDim}}>{t.type} · {fmtDate(t.date)}{t.time?` · ${t.time}`:""}</div></div>
-                <StatusBadge status={t.status}/>
-              </div>
-            ))}
-            {data.tasks.filter(t=>t.company_id===dc.id).length===0&&<div style={{fontSize:12,color:C.textDim,textAlign:"center",padding:"10px 0"}}>Žádné úkoly</div>}
-          </div>
-        </div>
-
-        {/* Pravý sloupec — REDESIGN B: Timeline aktivity */}
-        <div style={s.card}>
-          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}>
-            <div style={{fontSize:14,fontWeight:700,color:C.text}}>Aktivita · timeline</div>
-            <div style={{fontSize:11,color:C.textDim}}>{(dc.notes||[]).length} záznamů</div>
-          </div>
-          <NoteEntry notes={dc.notes||[]} onAdd={handleNoteAdd} onUpdate={handleNoteUpdate} onDelete={handleNoteDelete}/>
-        </div>
-      </div>
-
-      {modal==="edit"&&<CompanyModal initial={dc} onSave={async(f)=>{await ops.upsertCompany({...dc,...clean(f)});setModal(null);}} onClose={()=>setModal(null)}/>}
-      {modal==="newDeal"&&<DealModal initial={{title:"",company_id:dc.id,contact_id:"",type:"",qty:1,value:"",status:"Identifikováno",due_date:"",note:""}} companies={data.companies} contacts={data.contacts} onSave={async(f)=>{await ops.upsertDeal({...clean(f),id:uid(),qty:Number(f.qty)||1,value:Number(f.value)||0});setModal(null);}} onClose={()=>setModal(null)}/>}
-      {modal==="newTask"&&<TaskModal initial={{title:"",type:"Telefonát",company_id:dc.id,contact_id:"",date:today(),time:"",status:"Plánováno",note:""}} companies={data.companies} contacts={data.contacts} profiles={data.profiles} onSave={async(f)=>{const saved={...clean(f),id:uid()};await ops.upsertTask(saved);setModal(null);setGcalTask(saved);}} onClose={()=>setModal(null)}/>}
-      {modal==="newContact"&&<ContactModal initial={{name:"",company_id:dc.id,position:"",phone:"",email:"",linkedin:"",role:"Rozhodovatel",note:"",personal_note:""}} companies={data.companies} onSave={async(f)=>{await ops.upsertContact({...clean(f),id:uid()});setModal(null);}} onClose={()=>setModal(null)}/>}
-      {gcalTask&&<Modal title="" onClose={()=>setGcalTask(null)}><GCalPrompt task={gcalTask} companies={data.companies} contacts={data.contacts} onClose={()=>setGcalTask(null)}/></Modal>}
-    </div>
-  );
-
-  return (
-    <div>
-      <SectionHeader title="Firmy" count={filtered.length} onAdd={()=>setModal("new")} addLabel="Přidat firmu"/>
-      <div style={{display:"flex",gap:8,marginBottom:14,flexWrap:"wrap"}}>
-        <div style={{flex:1,minWidth:200}}><AutocompleteInput value={search} onChange={setSearch} suggestions={companyNames} placeholder="Hledat firmu…"/></div>
-        <div style={{display:"flex",gap:5,flexWrap:"wrap"}}>
-          {["Vše",...STATUSES.company].map(st=>(
-            <button key={st} onClick={()=>setFilter(st)} style={{...s.btn(filter===st?"primary":"ghost"),padding:"7px 11px",fontSize:11}}>{st}</button>
-          ))}
-        </div>
-      </div>
-      {filtered.map(c=>{
-        const lastNote=(c.notes||[]).slice(-1)[0];
-        const dealValue=data.deals.filter(d=>d.company_id===c.id&&!["Vyhráno","Prohráno"].includes(d.status)).reduce((s,d)=>s+(d.value||0),0);
-        return (
-          <div key={c.id} onClick={()=>setDetail(c.id)} style={{...s.card,cursor:"pointer",transition:"all 0.15s"}}
-            onMouseEnter={e=>{e.currentTarget.style.borderColor=C.accent;e.currentTarget.style.boxShadow="0 2px 8px rgba(46,139,0,0.1)";}}
-            onMouseLeave={e=>{e.currentTarget.style.borderColor=C.border;e.currentTarget.style.boxShadow="0 1px 4px rgba(0,0,0,0.06)";}}>
-            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:12}}>
-              <div style={{display:"flex",gap:10,alignItems:"center",flex:1,minWidth:0}}>
-                <div style={{width:36,height:36,borderRadius:8,background:C.accentLight,display:"flex",alignItems:"center",justifyContent:"center",fontSize:13,fontWeight:700,color:C.accent,flexShrink:0}}>
-                  {initials(c.name)}
-                </div>
-                <div style={{flex:1,minWidth:0}}>
-                  <div style={{fontWeight:700,fontSize:14,color:C.text,marginBottom:2}}>{c.name}</div>
-                  <div style={{fontSize:12,color:C.textMuted,display:"flex",gap:6,flexWrap:"wrap"}}>
-                    {c.industry&&<span>{c.industry}</span>}
-                    {c.address&&<span>· {c.address}</span>}
-                    {c.fleet>0&&<span>· {c.fleet} VZV</span>}
-                    {lastNote&&<span style={{color:C.textDim}}>· {fmtDateShort(lastNote.date)}</span>}
-                  </div>
-                </div>
-              </div>
-              <div style={{display:"flex",gap:8,alignItems:"center",flexShrink:0}}>
-                {dealValue>0&&<span style={{fontSize:12,fontWeight:700,color:C.accent}}>{fmtMoney(dealValue)}</span>}
-                <StatusBadge status={c.status}/>
-                <Icon d={Icons.chevronRight} size={14} stroke={C.textDim}/>
-              </div>
-            </div>
-          </div>
-        );
-      })}
-      {filtered.length===0&&<div style={{textAlign:"center",padding:"40px 0",color:C.textDim}}>Žádné firmy</div>}
-      {modal==="new"&&<CompanyModal onSave={async(f)=>{await ops.upsertCompany({...clean(f),id:uid(),notes:[],created:today()});setModal(null);}} onClose={()=>setModal(null)}/>}
-    </div>
-  );
-};
   const [modal,setModal] = useState(null);
   const [gcalTask,setGcalTask] = useState(null);
   const [search,setSearch] = useState("");
@@ -1075,7 +783,111 @@ const Companies = ({data,ops,focusId,onClearFocus}) => {
   const handleNoteUpdate = async (idx, text, type) => { const notes=[...(dc.notes||[])]; notes[idx]={...notes[idx],text,type}; await ops.upsertCompany({...dc,notes}); };
   const handleNoteDelete = async (idx) => { const notes=[...(dc.notes||[])]; notes.splice(idx,1); await ops.upsertCompany({...dc,notes}); };
 
-// --- CONTACTS ---
+  if (dc) return (
+    <div>
+      <button onClick={()=>setDetail(null)} style={{...s.btn("ghost"),marginBottom:18}}>← Zpět</button>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",flexWrap:"wrap",gap:10,marginBottom:18}}>
+        <div>
+          <h1 style={{margin:0,fontSize:22,fontWeight:800,color:C.text}}>{dc.name}</h1>
+          <div style={{marginTop:6,display:"flex",gap:6,flexWrap:"wrap",alignItems:"center"}}>
+            <StatusBadge status={dc.status}/>
+            {dc.industry&&<span style={{fontSize:12,color:C.textMuted}}>{dc.industry}</span>}
+            {dc.fleet>0&&<span style={{fontSize:12,color:C.textMuted}}>· {dc.fleet} VZV</span>}
+            {dc.competitor&&<span style={{fontSize:12,color:C.textDim}}>· {dc.competitor}</span>}
+          </div>
+        </div>
+        <div style={{display:"flex",gap:8}}>
+          <button onClick={()=>setModal("edit")} style={s.btn("ghost")}><Icon d={Icons.edit} size={13}/>Upravit</button>
+          <button onClick={async()=>{await ops.deleteCompany(dc.id);setDetail(null);}} style={s.btn("danger")}><Icon d={Icons.trash} size={13}/></button>
+        </div>
+      </div>
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14,marginBottom:14}}>
+        <div style={s.card}>
+          <div style={{fontSize:11,fontWeight:700,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.5px",marginBottom:8}}>Info</div>
+          {dc.address&&<div style={{fontSize:13,color:C.textMuted}}>{dc.address}</div>}
+          {dc.ico&&<div style={{fontSize:12,color:C.textDim,marginTop:3}}>IČO: {dc.ico}</div>}
+        </div>
+        <div style={s.card}>
+          <CardSectionHeader title="Dealy" onAdd={()=>setModal("newDeal")}/>
+          {data.deals.filter(d=>d.company_id===dc.id).map(d=>(
+            <div key={d.id} style={{marginBottom:8}}>
+              <div style={{fontSize:13,color:C.text,fontWeight:500}}>{d.title}</div>
+              <div style={{fontSize:11,color:C.textDim,display:"flex",gap:5,alignItems:"center",marginTop:2}}>{fmtMoney(d.value)} · <StatusBadge status={d.status}/></div>
+            </div>
+          ))}
+          {data.deals.filter(d=>d.company_id===dc.id).length===0&&<div style={{fontSize:12,color:C.textDim}}>Žádné dealy</div>}
+        </div>
+      </div>
+      <div style={s.card}>
+        <div style={{fontSize:14,fontWeight:700,color:C.text,marginBottom:12}}>Kontaktní osoby</div>
+        {data.contacts.filter(ct=>ct.company_id===dc.id).map(ct=>(
+          <div key={ct.id} style={{background:C.bg,borderRadius:8,padding:"12px 14px",marginBottom:8,border:`1px solid ${C.border}`}}>
+            <div style={{fontWeight:600,fontSize:14,color:C.text}}>{ct.name}</div>
+            <div style={{fontSize:12,color:C.textMuted,marginBottom:6}}>{ct.position} · <span style={s.badge(C.purple)}>{ct.role}</span></div>
+            <div style={{display:"flex",gap:14,flexWrap:"wrap"}}>
+              {ct.phone&&<a href={`tel:${ct.phone}`} style={{fontSize:12,color:C.accent,display:"flex",gap:4,alignItems:"center",textDecoration:"none",fontWeight:500}}><Icon d={Icons.phone} size={12}/>{ct.phone}</a>}
+              {ct.email&&<a href={`mailto:${ct.email}`} style={{fontSize:12,color:C.info,display:"flex",gap:4,alignItems:"center",textDecoration:"none"}}><Icon d={Icons.mail} size={12}/>{ct.email}</a>}
+            </div>
+            {ct.personal_note&&<div style={{fontSize:12,color:"#92610a",marginTop:6,background:C.yellowLight,padding:"6px 10px",borderRadius:6,border:`1px solid ${C.yellow}40`}}>😊 {ct.personal_note}</div>}
+          </div>
+        ))}
+        {data.contacts.filter(ct=>ct.company_id===dc.id).length===0&&<div style={{fontSize:12,color:C.textDim}}>Žádné kontakty</div>}
+      </div>
+      <div style={s.card}><CardSectionHeader title="Poznámky z terénu"/><NoteEntry notes={dc.notes||[]} onAdd={handleNoteAdd} onUpdate={handleNoteUpdate} onDelete={handleNoteDelete}/></div>
+      <div style={s.card}>
+        <CardSectionHeader title="Úkoly" onAdd={()=>setModal("newTask")}/>
+        {data.tasks.filter(t=>t.company_id===dc.id).map(t=>(
+          <div key={t.id} style={{display:"flex",gap:8,alignItems:"center",padding:"8px 0",borderBottom:`1px solid ${C.border}`}}>
+            <div style={{width:6,height:6,borderRadius:3,background:STATUS_COLORS[t.status],flexShrink:0}}/>
+            <div style={{flex:1}}><div style={{fontSize:13,color:C.text,fontWeight:500}}>{t.title}</div><div style={{fontSize:11,color:C.textDim}}>{t.type} · {fmtDate(t.date)}{t.time?` · ${t.time}`:""}</div></div>
+            <StatusBadge status={t.status}/>
+          </div>
+        ))}
+        {data.tasks.filter(t=>t.company_id===dc.id).length===0&&<div style={{fontSize:12,color:C.textDim}}>Žádné úkoly</div>}
+      </div>
+      {modal==="edit"&&<CompanyModal initial={dc} onSave={async(f)=>{await ops.upsertCompany({...dc,...clean(f)});setModal(null);}} onClose={()=>setModal(null)}/>}
+      {modal==="newDeal"&&<DealModal initial={{title:"",company_id:dc.id,contact_id:"",type:"",qty:1,value:"",status:"Identifikováno",due_date:"",note:""}} companies={data.companies} contacts={data.contacts} onSave={async(f)=>{await ops.upsertDeal({...clean(f),id:uid(),qty:Number(f.qty)||1,value:Number(f.value)||0});setModal(null);}} onClose={()=>setModal(null)}/>}
+      {modal==="newTask"&&<TaskModal initial={{title:"",type:"Telefonát",company_id:dc.id,contact_id:"",date:today(),time:"",status:"Plánováno",note:""}} companies={data.companies} contacts={data.contacts} profiles={data.profiles} onSave={async(f)=>{const saved={...clean(f),id:uid()};await ops.upsertTask(saved);setModal(null);setGcalTask(saved);}} onClose={()=>setModal(null)}/>}
+      {gcalTask&&<Modal title="" onClose={()=>setGcalTask(null)}><GCalPrompt task={gcalTask} companies={data.companies} contacts={data.contacts} onClose={()=>setGcalTask(null)}/></Modal>}
+    </div>
+  );
+
+  return (
+    <div>
+      <SectionHeader title="Firmy" count={filtered.length} onAdd={()=>setModal("new")} addLabel="Přidat firmu"/>
+      <div style={{display:"flex",gap:8,marginBottom:14,flexWrap:"wrap"}}>
+        <div style={{flex:1,minWidth:200}}><AutocompleteInput value={search} onChange={setSearch} suggestions={companyNames} placeholder="Hledat firmu…"/></div>
+        <div style={{display:"flex",gap:5,flexWrap:"wrap"}}>
+          {["Vše",...STATUSES.company].map(st=>(
+            <button key={st} onClick={()=>setFilter(st)} style={{...s.btn(filter===st?"primary":"ghost"),padding:"7px 11px",fontSize:11}}>{st}</button>
+          ))}
+        </div>
+      </div>
+      {filtered.map(c=>(
+        <div key={c.id} onClick={()=>setDetail(c.id)} style={{...s.card,cursor:"pointer",transition:"all 0.15s"}}
+          onMouseEnter={e=>{e.currentTarget.style.borderColor=C.accent;e.currentTarget.style.boxShadow="0 2px 8px rgba(46,139,0,0.1)";}}
+          onMouseLeave={e=>{e.currentTarget.style.borderColor=C.border;e.currentTarget.style.boxShadow="0 1px 4px rgba(0,0,0,0.06)";}}>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:12}}>
+            <div style={{flex:1,minWidth:0}}>
+              <div style={{fontWeight:700,fontSize:14,color:C.text,marginBottom:3}}>{c.name}</div>
+              <div style={{fontSize:12,color:C.textMuted,display:"flex",gap:6,flexWrap:"wrap"}}>
+                {c.industry&&<span>{c.industry}</span>}
+                {c.address&&<span>· {c.address}</span>}
+                {c.fleet>0&&<span>· {c.fleet} VZV</span>}
+                {c.competitor&&<span style={{color:C.textDim}}>· {c.competitor}</span>}
+              </div>
+            </div>
+            <div style={{display:"flex",gap:8,alignItems:"center",flexShrink:0}}><StatusBadge status={c.status}/><Icon d={Icons.chevronRight} size={14} stroke={C.textDim}/></div>
+          </div>
+        </div>
+      ))}
+      {filtered.length===0&&<div style={{textAlign:"center",padding:"40px 0",color:C.textDim}}>Žádné firmy</div>}
+      {modal==="new"&&<CompanyModal onSave={async(f)=>{await ops.upsertCompany({...clean(f),id:uid(),notes:[],created:today()});setModal(null);}} onClose={()=>setModal(null)}/>}
+    </div>
+  );
+};
+
+// ── CONTACTS ──────────────────────────────────────────────────────────────
 const Contacts = ({data,ops,onNavigateToCompany}) => {
   const [modal,setModal] = useState(null);
   const [search,setSearch] = useState("");
@@ -1121,7 +933,7 @@ const Contacts = ({data,ops,onNavigateToCompany}) => {
   );
 };
 
-// --- DEALS ---
+// ── DEALS ─────────────────────────────────────────────────────────────────
 const Deals = ({data,ops}) => {
   const [modal,setModal] = useState(null);
   const [filter,setFilter] = useState("Vše");
@@ -1182,7 +994,7 @@ const Deals = ({data,ops}) => {
   );
 };
 
-// --- TASKS ---
+// ── TASKS ─────────────────────────────────────────────────────────────────
 const Tasks = ({data,ops,profile}) => {
   const [modal,setModal] = useState(null);
   const [gcalTask,setGcalTask] = useState(null);
@@ -1243,7 +1055,7 @@ const Tasks = ({data,ops,profile}) => {
   );
 };
 
-// --- MAIN APP ---
+// ── MAIN APP ──────────────────────────────────────────────────────────────
 const NAV = [
   {id:"dashboard",label:"Přehled",icon:Icons.chart},
   {id:"companies",label:"Firmy",icon:Icons.building},
@@ -1295,7 +1107,7 @@ export default function App() {
   }, [session]);
 
   const makeApi = (token) => ({
-    getCompanies: () => sb("companies?order=created.desc", {}, token),
+    getCompanies: () => sb("companies?order=updated_at.desc.nullslast", {}, token),
     upsertCompany: (c) => sb("companies", { method:"POST", body:JSON.stringify(c), headers:{"Prefer":"resolution=merge-duplicates,return=representation"} }, token),
     deleteCompany: (id) => sb(`companies?id=eq.${id}`, { method:"DELETE", prefer:"" }, token),
     getContacts: () => sb("contacts?order=name.asc", {}, token),
