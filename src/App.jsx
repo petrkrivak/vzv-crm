@@ -991,7 +991,7 @@ const Companies = ({data,ops,focusId,onClearFocus}) => {
                 </div>
                 <div style={{flex:1,minWidth:0}}>
                   <div style={{fontWeight:600,fontSize:13,color:C.text}}>{ct.name}</div>
-                  <div style={{fontSize:11,color:C.textMuted,marginBottom:4}}>{ct.position} · <span style={s.badge(C.purple)}>{ct.role}</span></div>
+                  <div style={{fontSize:11,color:C.textMuted,marginBottom:4}}>{ct.position} · <span style={s.badge(C.accent)}>{ct.role}</span></div>
                   <div style={{display:"flex",gap:10,flexWrap:"wrap"}}>
                     {ct.phone&&<a href={`tel:${ct.phone}`} style={{fontSize:12,color:C.accent,display:"flex",gap:3,alignItems:"center",textDecoration:"none",fontWeight:500}}><Icon d={Icons.phone} size={11}/>{ct.phone}</a>}
                     {ct.email&&<a href={`mailto:${ct.email}`} style={{fontSize:12,color:C.info,display:"flex",gap:3,alignItems:"center",textDecoration:"none"}}><Icon d={Icons.mail} size={11}/>{ct.email}</a>}
@@ -1119,7 +1119,7 @@ const Contacts = ({data,ops,onNavigateToCompany}) => {
                   <div style={{fontSize:12,color:C.textMuted}}>{ct.position}</div>
                   {company&&<div onClick={()=>onNavigateToCompany(ct.company_id)} style={{fontSize:11,color:C.accent,marginTop:2,cursor:"pointer",display:"flex",alignItems:"center",gap:3,fontWeight:500}}><Icon d={Icons.building} size={10}/>{company.name}</div>}
                 </div>
-                <span style={s.badge(C.purple)}>{ct.role}</span>
+                <span style={s.badge(C.accent)}>{ct.role}</span>
               </div>
               <div style={{display:"flex",flexDirection:"column",gap:5,margin:"8px 0"}}>
                 {ct.phone&&<a href={`tel:${ct.phone}`} style={{fontSize:12,color:C.accent,display:"flex",gap:5,alignItems:"center",textDecoration:"none",fontWeight:500}}><Icon d={Icons.phone} size={12}/>{ct.phone}</a>}
