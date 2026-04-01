@@ -267,9 +267,9 @@ const Modal = ({title, onClose, children, onSave, saveLabel="Uložit", saveDisab
     return () => { document.body.style.overflow = prev; };
   }, []);
   return (
-  <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.5)",zIndex:1000,display:"flex",alignItems:"flex-end",justifyContent:"center",overscrollBehavior:"none"}}
+  <div style={{position:"fixed",top:0,left:0,right:0,bottom:0,background:"rgba(0,0,0,0.5)",zIndex:1000,display:"flex",alignItems:"flex-end",justifyContent:"center",touchAction:"none"}}
     onClick={e=>e.target===e.currentTarget&&onClose()}>
-    <div style={{background:C.white,borderRadius:"20px 20px 0 0",width:"100%",maxWidth:600,maxHeight:"92vh",display:"flex",flexDirection:"column",boxShadow:"0 -4px 32px rgba(0,0,0,0.15)",overscrollBehavior:"contain"}}>
+    <div style={{background:C.white,borderRadius:"20px 20px 0 0",width:"100%",maxWidth:600,maxHeight:"85%",display:"flex",flexDirection:"column",boxShadow:"0 -4px 32px rgba(0,0,0,0.15)"}} className="modal-sheet">
       <div style={{padding:"12px 20px 0",flexShrink:0}}>
         <div style={{width:40,height:4,borderRadius:2,background:C.border,margin:"0 auto 12px"}}/>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14,paddingBottom:12,borderBottom:`1px solid ${C.border}`}}>
@@ -282,7 +282,7 @@ const Modal = ({title, onClose, children, onSave, saveLabel="Uložit", saveDisab
         <div style={{height:16}}/>
       </div>
       {onSave && (
-        <div style={{padding:"12px 20px 24px",borderTop:`1px solid ${C.border}`,background:C.white,flexShrink:0,display:"flex",gap:10}}>
+        <div style={{padding:"12px 20px max(24px, env(safe-area-inset-bottom, 24px))",borderTop:`1px solid ${C.border}`,background:C.white,flexShrink:0,display:"flex",gap:10}}>
           <button onClick={onClose} style={{...s.btn("ghost"),flex:1,justifyContent:"center",padding:"13px",fontSize:15}}>Zrušit</button>
           <button onClick={onSave} disabled={saveDisabled} style={{...s.btn("primary"),flex:2,justifyContent:"center",padding:"13px",fontSize:15,opacity:saveDisabled?0.5:1}}>{saveLabel}</button>
         </div>
@@ -1426,6 +1426,7 @@ export default function App() {
         select option{background:${C.white};color:${C.text};}
         input:focus, select:focus, textarea:focus { border-color: ${C.accent} !important; box-shadow: 0 0 0 3px ${C.accentGlow}; }
         @keyframes spin{to{transform:rotate(360deg);}}
+        .modal-sheet { max-height: min(85vh, 85dvh); padding-bottom: env(safe-area-inset-bottom, 0px); }
       `}</style>
 
       <div style={{position:"sticky",top:0,zIndex:100,background:C.white,borderBottom:`1px solid ${C.border}`,boxShadow:"0 1px 4px rgba(0,0,0,0.06)"}}>
