@@ -261,35 +261,50 @@ const AutocompleteInput = ({ value, onChange, suggestions, placeholder }) => {
 };
 
 const Modal = ({title, onClose, children, onSave, saveLabel="Uložit", saveDisabled}) => {
+  const sheetRef = useRef(null);
+
   useEffect(() => {
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    return () => { document.body.style.overflow = prev; };
+    const vv = window.visualViewport;
+    if (!vv) return;
+    const onResize = () => {
+      if (!sheetRef.current) return;
+      // Výška dostupného prostoru = výška visual viewportu
+      const availH = vv.height;
+      const maxH = Math.floor(availH * 0.92);
+      sheetRef.current.style.maxHeight = maxH + "px";
+      // Posunutí sheetu — offset od spodku visual viewportu
+      const offsetBottom = window.innerHeight - vv.height - vv.offsetTop;
+      sheetRef.current.parentElement.style.paddingBottom = Math.max(0, offsetBottom) + "px";
+    };
+    vv.addEventListener("resize", onResize);
+    onResize();
+    return () => vv.removeEventListener("resize", onResize);
   }, []);
+
   return (
-  <div style={{position:"fixed",top:0,left:0,right:0,bottom:0,background:"rgba(0,0,0,0.5)",zIndex:1000,display:"flex",alignItems:"flex-end",justifyContent:"center",touchAction:"none"}}
-    onClick={e=>e.target===e.currentTarget&&onClose()}>
-    <div style={{background:C.white,borderRadius:"20px 20px 0 0",width:"100%",maxWidth:600,maxHeight:"85%",display:"flex",flexDirection:"column",boxShadow:"0 -4px 32px rgba(0,0,0,0.15)"}} className="modal-sheet">
-      <div style={{padding:"12px 20px 0",flexShrink:0}}>
-        <div style={{width:40,height:4,borderRadius:2,background:C.border,margin:"0 auto 12px"}}/>
-        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14,paddingBottom:12,borderBottom:`1px solid ${C.border}`}}>
-          <h2 style={{margin:0,fontSize:17,fontWeight:700,color:C.text}}>{title}</h2>
-          <button onClick={onClose} style={{background:"none",border:"none",cursor:"pointer",color:C.textMuted,padding:4}}><Icon d={Icons.x} size={20}/></button>
+    <div style={{position:"fixed",top:0,left:0,right:0,bottom:0,background:"rgba(0,0,0,0.5)",zIndex:1000,display:"flex",alignItems:"flex-end",justifyContent:"center"}}
+      onClick={e=>e.target===e.currentTarget&&onClose()}>
+      <div ref={sheetRef} style={{background:C.white,borderRadius:"20px 20px 0 0",width:"100%",maxWidth:600,maxHeight:"90vh",display:"flex",flexDirection:"column",boxShadow:"0 -4px 32px rgba(0,0,0,0.15)"}}>
+        <div style={{padding:"12px 20px 0",flexShrink:0}}>
+          <div style={{width:40,height:4,borderRadius:2,background:C.border,margin:"0 auto 12px"}}/>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14,paddingBottom:12,borderBottom:`1px solid ${C.border}`}}>
+            <h2 style={{margin:0,fontSize:17,fontWeight:700,color:C.text}}>{title}</h2>
+            <button onClick={onClose} style={{background:"none",border:"none",cursor:"pointer",color:C.textMuted,padding:4}}><Icon d={Icons.x} size={20}/></button>
+          </div>
         </div>
-      </div>
-      <div style={{flex:1,overflow:"auto",padding:"0 20px"}}>
-        {children}
-        <div style={{height:16}}/>
-      </div>
-      {onSave && (
-        <div style={{padding:"12px 20px max(24px, env(safe-area-inset-bottom, 24px))",borderTop:`1px solid ${C.border}`,background:C.white,flexShrink:0,display:"flex",gap:10}}>
-          <button onClick={onClose} style={{...s.btn("ghost"),flex:1,justifyContent:"center",padding:"13px",fontSize:15}}>Zrušit</button>
-          <button onClick={onSave} disabled={saveDisabled} style={{...s.btn("primary"),flex:2,justifyContent:"center",padding:"13px",fontSize:15,opacity:saveDisabled?0.5:1}}>{saveLabel}</button>
+        <div style={{flex:1,overflowY:"auto",padding:"0 20px"}}>
+          {children}
+          <div style={{height:16}}/>
         </div>
-      )}
-      {!onSave && <div style={{height:20,flexShrink:0}}/>}
+        {onSave && (
+          <div style={{padding:"12px 20px 24px",borderTop:`1px solid ${C.border}`,background:C.white,flexShrink:0,display:"flex",gap:10}}>
+            <button onClick={onClose} style={{...s.btn("ghost"),flex:1,justifyContent:"center",padding:"13px",fontSize:15}}>Zrušit</button>
+            <button onClick={onSave} disabled={saveDisabled} style={{...s.btn("primary"),flex:2,justifyContent:"center",padding:"13px",fontSize:15,opacity:saveDisabled?0.5:1}}>{saveLabel}</button>
+          </div>
+        )}
+        {!onSave && <div style={{height:20,flexShrink:0}}/>}
+      </div>
     </div>
-  </div>
   );
 };
 
@@ -758,20 +773,20 @@ const Dashboard = ({data, profile, onNavigate}) => {
 
   return (
     <div>
-      <div style={{marginBottom:16,padding:"20px 24px",background:C.white,borderRadius:12,border:`1px solid ${C.border}`,boxShadow:"0 1px 4px rgba(0,0,0,0.06)"}}>
+      <div style={{marginBottom:16,padding:"16px 16px",background:C.white,borderRadius:12,border:`1px solid ${C.border}`,boxShadow:"0 1px 4px rgba(0,0,0,0.06)"}}>
         <div style={{fontSize:11,color:C.textDim,marginBottom:3,fontWeight:500}}>{new Date().toLocaleDateString("cs-CZ",{weekday:"long",year:"numeric",month:"long",day:"numeric"})}</div>
         <h1 style={{margin:0,fontSize:24,fontWeight:800,color:C.text}}>Dobrý den, {firstName} 👋</h1>
         <p style={{margin:"4px 0 0",color:C.textMuted,fontSize:13}}>Přehled VZV pipeline · VIVA Lovosice{profile?.region?` · ${profile.region} region`:""}</p>
       </div>
 
-      <div style={{display:"flex",gap:12,flexWrap:"wrap",marginBottom:16}}>
+      <div className="stat-row" style={{display:"flex",gap:12,flexWrap:"wrap",marginBottom:16}}>
         <Stat icon={Icons.building} label="Firmy" value={companies.length} sub={`${companies.filter(c=>c.status==="Zákazník").length} zákazníků`} color={C.info} onClick={()=>onNavigate("companies")}/>
         <Stat icon={Icons.target} label="Pipeline" value={fmtMoneyShort(pipeline)} sub={`${activeDeals.length} příležitostí`} color={C.accent} onClick={()=>onNavigate("deals")}/>
         <Stat icon={Icons.check} label="Vyhráno" value={fmtMoneyShort(won)} sub={`${deals.filter(d=>d.status==="Vyhráno").length} dealů`} color={C.success}/>
         <Stat icon={Icons.clock} label="Po termínu" value={overdue.length} sub={overdue.length>0?"nutná akce":"vše v pořádku"} color={overdue.length>0?C.danger:C.success} onClick={()=>onNavigate("tasks")}/>
       </div>
 
-      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:16,marginBottom:16}}>
+      <div className="dash-grid" style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:16,marginBottom:16}}>
         <div style={s.card}>
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14}}>
             <div style={{fontSize:11,fontWeight:700,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.5px"}}>Aktivita za 7 dní</div>
@@ -846,7 +861,7 @@ const Dashboard = ({data, profile, onNavigate}) => {
         </div>
       </div>
 
-      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:16,marginBottom:16}}>
+      <div className="dash-grid" style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:16,marginBottom:16}}>
         <div style={s.card}>
           <div style={{fontSize:11,fontWeight:700,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.5px",marginBottom:14}}>Pipeline po fázích</div>
           {["Identifikováno","Nabídka odeslána","Jednání"].map(stage=>{
@@ -993,7 +1008,7 @@ const Companies = ({data,ops,focusId,onClearFocus}) => {
         </div>
       </div>
 
-      <div style={{display:"grid",gridTemplateColumns:"1fr 1.4fr",gap:14}}>
+      <div className="company-detail-grid" style={{display:"grid",gridTemplateColumns:"1fr 1.4fr",gap:14}}>
         <div>
           <div style={s.card}>
             <CardSectionHeader title="Kontaktní osoby" onAdd={()=>setModal("newContact")}/>
@@ -1066,7 +1081,7 @@ const Companies = ({data,ops,focusId,onClearFocus}) => {
   return (
     <div>
       <SectionHeader title="Firmy" count={filtered.length} onAdd={()=>setModal("new")} addLabel="Přidat firmu"/>
-      <div style={{display:"flex",gap:8,marginBottom:14,flexWrap:"wrap"}}>
+      <div style={{display:"flex",gap:8,marginBottom:14,flexWrap:"wrap",overflowX:"auto"}}>
         <div style={{flex:1,minWidth:200}}><AutocompleteInput value={search} onChange={setSearch} suggestions={companyNames} placeholder="Hledat firmu…"/></div>
         <div style={{display:"flex",gap:5,flexWrap:"wrap"}}>
           {["Vše",...STATUSES.company].map(st=>(
@@ -1121,7 +1136,7 @@ const Contacts = ({data,ops,onNavigateToCompany}) => {
     <div>
       <SectionHeader title="Kontakty" count={filtered.length} onAdd={()=>setModal("new")} addLabel="Přidat kontakt"/>
       <div style={{marginBottom:14}}><AutocompleteInput value={search} onChange={setSearch} suggestions={contactNames} placeholder="Hledat kontakt…"/></div>
-      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(280px,1fr))",gap:14}}>
+      <div className="contacts-grid" style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(280px,1fr))",gap:14}}>
         {filtered.map(ct=>{
           const company=data.companies.find(c=>c.id===ct.company_id);
           return (
@@ -1165,7 +1180,7 @@ const Deals = ({data,ops}) => {
   return (
     <div>
       <SectionHeader title="Pipeline" count={filtered.length} onAdd={()=>setModal("new")} addLabel="Přidat deal"/>
-      <div style={{display:"flex",gap:8,marginBottom:14,flexWrap:"wrap"}}>
+      <div style={{display:"flex",gap:8,marginBottom:14,flexWrap:"wrap",overflowX:"auto"}}>
         {STATUSES.deal.map(st=>{
           const items=data.deals.filter(d=>d.status===st);
           if(!items.length) return null;
@@ -1426,11 +1441,21 @@ export default function App() {
         select option{background:${C.white};color:${C.text};}
         input:focus, select:focus, textarea:focus { border-color: ${C.accent} !important; box-shadow: 0 0 0 3px ${C.accentGlow}; }
         @keyframes spin{to{transform:rotate(360deg);}}
-        .modal-sheet { max-height: min(85vh, 85dvh); padding-bottom: env(safe-area-inset-bottom, 0px); }
+        /* Mobil */
+        @media (max-width: 640px) {
+          .stat-row { flex-direction: column !important; }
+          .dash-grid { grid-template-columns: 1fr !important; }
+          .company-detail-grid { grid-template-columns: 1fr !important; }
+          .deals-kanban { flex-direction: column !important; }
+          .contacts-grid { grid-template-columns: 1fr !important; }
+        }
+        @media (max-width: 480px) {
+          .nav-label { display: none !important; }
+        }
       `}</style>
 
       <div style={{position:"sticky",top:0,zIndex:100,background:C.white,borderBottom:`1px solid ${C.border}`,boxShadow:"0 1px 4px rgba(0,0,0,0.06)"}}>
-        <div style={{maxWidth:1100,margin:"0 auto",padding:"0 20px",display:"flex",alignItems:"center",height:56,gap:10}}>
+        <div style={{maxWidth:1100,margin:"0 auto",padding:"0 8px",display:"flex",alignItems:"center",height:52,gap:4}}>
           <div style={{display:"flex",alignItems:"center",gap:8,marginRight:16}}>
             <div style={{background:C.accent,borderRadius:8,padding:"5px 8px",display:"flex",alignItems:"center",borderRight:`3px solid ${C.yellow}`}}>
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
@@ -1445,13 +1470,13 @@ export default function App() {
           <nav style={{display:"flex",gap:2,flex:1}}>
             {NAV.map(n=>(
               <button key={n.id} onClick={()=>navigate(n.id)} style={{display:"flex",alignItems:"center",gap:5,padding:"6px 12px",borderRadius:7,border:"none",cursor:"pointer",fontSize:13,fontWeight:600,transition:"all 0.15s",position:"relative",background:page===n.id?C.accentLight:"transparent",color:page===n.id?C.accent:C.textMuted,borderBottom:page===n.id?`2px solid ${C.accent}`:"2px solid transparent"}}>
-                <Icon d={n.icon} size={13}/>{n.label}
+                <Icon d={n.icon} size={13}/><span className="nav-label">{n.label}</span>
                 {n.id==="tasks"&&overdueCount>0&&<span style={{position:"absolute",top:2,right:2,width:7,height:7,borderRadius:4,background:C.danger}}/>}
               </button>
             ))}
             {profile?.role==="admin"&&(
               <button onClick={()=>navigate("users")} style={{display:"flex",alignItems:"center",gap:5,padding:"6px 12px",borderRadius:7,border:"none",cursor:"pointer",fontSize:13,fontWeight:600,transition:"all 0.15s",background:page==="users"?C.accentLight:"transparent",color:page==="users"?C.accent:C.textMuted,borderBottom:page==="users"?`2px solid ${C.accent}`:"2px solid transparent"}}>
-                <Icon d={Icons.users} size={13}/>Uživatelé
+                <Icon d={Icons.users} size={13}/><span className="nav-label">Uživatelé</span>
               </button>
             )}
           </nav>
@@ -1478,7 +1503,7 @@ export default function App() {
         </div>
       )}
 
-      <div style={{maxWidth:1100,margin:"0 auto",padding:"24px 20px"}}>
+      <div style={{maxWidth:1100,margin:"0 auto",padding:"16px 12px"}}>
         {page==="dashboard"&&<Dashboard data={data} profile={profile} onNavigate={navigate}/>}
         {page==="companies"&&<Companies data={data} ops={ops} focusId={focusId} onClearFocus={()=>setFocusId(null)}/>}
         {page==="contacts"&&<Contacts data={data} ops={ops} onNavigateToCompany={(id)=>navigate("companies",id)}/>}
