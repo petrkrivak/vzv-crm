@@ -742,6 +742,281 @@ const ContactModal = ({initial, companies, onSave, onClose}) => {
   return <Modal title={initial?.id?"Upravit kontakt":"Nový kontakt"} onClose={onClose} onSave={()=>f.name&&onSave(f)} saveLabel="Uložit kontakt" saveDisabled={!f.name}><ContactFormFields f={f} u={u} companies={companies}/></Modal>;
 };
 
+
+// --- PŘIVÍTÁNÍ ---
+const GREETINGS = {
+  po: {
+    rano: [
+      "Pondělní ráno — někdo to dělat musí, a ten někdo jsi ty.",
+      "Nový týden, čistý stůl, plná hlava plánů. Pojď na to!",
+      "Pondělí zavolalo. Řeklo, že máš plno schůzek.",
+      "Začínáme znova od nuly — ale tentokrát chytřeji.",
+      "Káva v ruce, CRM otevřený. To je správný start týdne.",
+      "Pondělí není problém. Problém jsou zákazníci, kteří ještě nevědí, že tě potřebují.",
+      "Nový týden = nová šance přesvědčit zákazníky, že Hangcha je ta správná volba.",
+      "Vstávej, svět nezastaví — a ani ty bys nechtěl.",
+      "Pondělí: den, kdy se rozhoduje, jak bude vypadat celý týden.",
+      "Týden začíná. Zákazníci čekají, vozíky jsou připraveny.",
+    ],
+    dopoledne: [
+      "Pondělní dopoledne — ideální čas na telefonáty, než zákazníci utečou na oběd.",
+      "Dopoledne v pondělí: všichni jsou ještě v práci, nikdo ještě není naštvaný.",
+      "Zavolej dřív, než tě předběhne konkurence.",
+      "Dopoledne se rozjíždí. Ty taky.",
+      "Pondělní dopoledne patří těm, kdo volají jako první.",
+      "Máš před sebou celý týden. Nejlepší je začít hned.",
+      "Každý telefonát dopoledne je investice do pátečního výsledku.",
+      "Kdo zavolá jako první v pondělí, vyhrává týden.",
+      "Dopoledne v pondělí: konkurence ještě spí, ty už makáš.",
+      "Rozjezd je nejdůležitější část závodu. A ty jsi právě nastartoval.",
+    ],
+    odpoledne: [
+      "Pondělní odpoledne — ještě je čas na jeden důležitý telefonát.",
+      "Dopoledne bylo příprava, odpoledne je akce.",
+      "Zákazníci po obědě bývají přístupnější. Využij to.",
+      "Přišel si do druhé půlky pondělí. Dobré tempo.",
+      "Odpoledne v pondělí: kdo to nevzdal ráno, nevzdá to ani teď.",
+      "Ještě pár hodin do konce dne — udělej z nich něco.",
+      "Pondělní odpoledne patří těm, co dopoledne makali.",
+      "Zbývá půlka dne. Co z ní uděláš?",
+      "Odpoledne je čas uzavřít, co ráno začalo.",
+      "Pondělí se chýlí ke konci. Jak to dopadlo?",
+    ],
+    vecer: [
+      "Pondělí přežito. A to je vlastně velký úspěch.",
+      "První den týdne za tebou. Zbytek bude snazší.",
+      "Večer v pondělí: čas na přehled, co se povedlo.",
+      "Dobrý start týdne? Dobrý výsledek na konci.",
+      "Pondělí skončilo. Ty jsi skončil líp.",
+      "Zápisky, úkoly, plány — večer v pondělí je čas na pořádek.",
+      "Co jsi dnes udělal, ti zítra usnadní práci.",
+      "Pondělní večer: odměna za přežití prvního dne.",
+      "Sedm dní v týdnu, šest zbývá. Dobrý základ.",
+      "Dobrý obchodník si v pondělí večer připravuje úterý.",
+    ],
+  },
+  ut: {
+    rano: [
+      "Úterý ráno — motor je zahřátý, teď se jede.",
+      "Druhý den týdne a stále v sedle. Tak to má být.",
+      "Úterý: pondělní chaos je za tebou, středa je daleko. Ideální čas na práci.",
+      "Ráno v úterý voní po příležitostech.",
+      "Úterý ráno je nejproduktivnější část týdne. Věří tomu spousta lidí. Buď jedním z nich.",
+      "Po pondělí přichází úterý, a to je vlastně úleva.",
+      "Dnes je úterý. Zákazníci jsou otevřenější než v pondělí.",
+      "Rozhýbej se — úterní ráno čeká na tebe.",
+      "Druhý den, druhá šance, stejné odhodlání.",
+      "Úterý ráno: zásoby energie doplněny, CRM otevřen.",
+    ],
+    dopoledne: [
+      "Úterní dopoledne — to je zlatá hodinka pro obchodníky.",
+      "Dopoledne v úterý: zákazníci jsou v práci, kancelář je otevřená.",
+      "Úterý dopoledne patří těm, co mají plán.",
+      "Dvě dopoledne v týdnu jsou lepší než jedno. Toto je to druhé.",
+      "Zavolej, napiš, navštiv — dopoledne v úterý je na to ideální.",
+      "Máš rozjetý rytmus? Nepřerušuj ho.",
+      "Zákazník, který v pondělí řekl 'zavolejte jindy', čeká právě teď.",
+      "Dopoledne utíká — využij každou minutu.",
+      "Úterní dopoledne: méně schůzek, více telefonátů.",
+      "Kdo maká v úterý dopoledne, sklízí ve čtvrtek.",
+    ],
+    odpoledne: [
+      "Úterní odpoledne — druhá vlna energie přichází.",
+      "Po obědě to vždy trochu zpomalí. Ale ne u tebe.",
+      "Odpoledne v úterý: ideální na nabídky a follow-upy.",
+      "Zákazníci po obědě přemýšlejí. Pomoz jim přemýšlet správně.",
+      "Odpoledne v úterý je čas na výsledky.",
+      "Dvě hodiny odpoledne v úterý = čas na klíčový telefonát.",
+      "Přišel jsi do odpoledne s přehledem. To je správně.",
+      "Úterní odpoledne — ještě daleko do konce týdne, ale blíže k cíli.",
+      "Každý follow-up teď může být zakázka na konci týdne.",
+      "Úterý odpoledne: nekončí to dopolednem.",
+    ],
+    vecer: [
+      "Úterý večer: týden nabírá tempo.",
+      "Druhý den hotový. Jdeš dobře.",
+      "Večer v úterý — čas na plánování zbytku týdne.",
+      "Dva dny za tebou, tři před tebou. Dobrá bilance.",
+      "Úterní večer patří těm, kdo si ho zaslouží.",
+      "Zkontroluj úkoly, připrav se na středu.",
+      "Co jsi dnes rozjel, zítra dokončíš.",
+      "Úterní večer: krátký odpočinek před středním finiším.",
+      "Dobrý úterní večer začíná dobrým pracovním úterkem.",
+      "Dva dny, co počítají. Zbytek taky.",
+    ],
+  },
+  st: {
+    rano: [
+      "Středa! Polovina týdne. Teď se rozhoduje, jak to dopadne.",
+      "Střední bod týdne — odtud je stejně daleko dopředu i dozadu. Jdi dopředu.",
+      "Středa ráno: půlmaraton je za tebou, druhá půlka začíná.",
+      "Přežil jsi pondělí i úterý. Středa je tvoje.",
+      "Středeční ráno voní po šanci otočit týden k lepšímu.",
+      "Středa: den, kdy se rozhoduje páteční nálada.",
+      "Polovina týdne je tady. Jak se ti daří?",
+      "Středa ráno = čas přehodnotit, co funguje a co ne.",
+      "Dobré ráno uprostřed týdne. Jsi v tom nejlepším místě.",
+      "Středa je jako přestávka v zápase — jen kratší a bez odpočinku.",
+    ],
+    dopoledne: [
+      "Středeční dopoledne — srdce pracovního týdne.",
+      "Středa dopoledne: zákazníci jsou stále ještě v pracovním módu.",
+      "Přesně uprostřed týdne. Přesně čas na klíčový hovor.",
+      "Středeční dopoledne patří aktivním obchodníkům.",
+      "Dopoledne ve středu: kdo nezavolá teď, čeká do příštího týdne.",
+      "Středa dopoledne = ideální čas pro obchodní schůzku.",
+      "Uprostřed týdne, uprostřed akce. Pojď!",
+      "Středeční dopoledne: zákazníci jsou zahřátí a rozhodnutí.",
+      "Polovina týdne je tady — a ty máš stále plno energie.",
+      "Dopoledne uprostřed týdne: využij každou minutu.",
+    ],
+    odpoledne: [
+      "Středeční odpoledne — svah dolů je klidnější. Ale ty jedeš stále nahoru.",
+      "Po středeční přestávce na oběd přichází druhá vlna.",
+      "Odpoledne ve středu: ještě dva celé dny do konce týdne.",
+      "Středa odpoledne: čas na výsledky, ne na výmluvy.",
+      "Středeční odpoledne: zákazníci jsou přístupnější než ráno.",
+      "Druhá polovina středečního dne — teď to rozhoď.",
+      "Čtvrtek se blíží, pátek taky. Ale nejdřív dodělej středu.",
+      "Odpoledne uprostřed týdne: klíčový moment.",
+      "Středa odpoledne je pro ty, co ráno nespali.",
+      "Zákazník, který dopoledne řekl ne, odpoledne říká možná.",
+    ],
+    vecer: [
+      "Středa večer: přežil jsi přelom týdne. Gratuluji.",
+      "Polovina týdne za tebou. A zvládl jsi ji dobře.",
+      "Středeční večer: zbývají jen dva pracovní dny. To dáš.",
+      "Čtvrtek a pátek jsou před tebou — to je ta lepší polovina.",
+      "Večer ve středu: čas na rychlý přehled a plán na čtvrtek.",
+      "Středa večer = ten moment, kdy začínáš vidět konec tunelu.",
+      "Dobré středeční večery mají ti, co pracovali.",
+      "Dva dny do víkendu. Ale nejdřív si dej pohodu.",
+      "Středa večer: ani pondělí, ani pátek. Přesně uprostřed.",
+      "Výborný střed týdne = skvělý konec týdne.",
+    ],
+  },
+  ct: {
+    rano: [
+      "Čtvrtek ráno — jeden den do finále. Makej!",
+      "Čtvrteční ráno je pro ty, co se nevzdají před cílem.",
+      "Čtvrtek: předpáteční energie. Využij ji.",
+      "Ráno ve čtvrtek: zákazníci ještě stihnou říct ano před víkendem.",
+      "Čtvrtek ráno = poslední šance na klíčový hovor před páteční pohodou.",
+      "Předposlední den. Pořád dost času na velký deal.",
+      "Čtvrteční ráno voní po uzavřených zakázkách.",
+      "Dnes je čtvrtek. Zákazníci se začínají rozhodovat před víkendem.",
+      "Čtvrtek ráno: ještě je čas všechno změnit.",
+      "Čtvrteční ranní energie je nejvyšší v týdnu. Věř tomu.",
+    ],
+    dopoledne: [
+      "Čtvrteční dopoledne: zákazníci chtějí vše vyřešit před víkendem.",
+      "Dopoledne ve čtvrtek — deadline efekt funguje naplno.",
+      "Čtvrtek dopoledne: kdo nezavolá teď, zavolá příští týden.",
+      "Předvíkendový tlak? To je tvůj přirozený spojenec.",
+      "Čtvrteční dopoledne: zákazníci jsou nejrozhodnější.",
+      "Dnes dopoledne zavři, co jsi celý týden otevíral.",
+      "Čtvrtek dopoledne = nejlepší čas na follow-up z pondělka.",
+      "Zákazníci chtějí mít vše vyřešeno před víkendem. Pomoz jim.",
+      "Čtvrteční dopoledne: jedna schůzka navíc může změnit vše.",
+      "Dopoledne ve čtvrtek: sprint před cílem.",
+    ],
+    odpoledne: [
+      "Čtvrteční odpoledne — ještě není pátek, ale je to blízko.",
+      "Odpoledne ve čtvrtek: zákazníci jsou v nákupní náladě.",
+      "Čtvrteční odpoledne: co nezavřeš dnes, zavřeš v pondělí.",
+      "Zbývá jedno odpoledne a jeden celý den. Využij je.",
+      "Čtvrtek odpoledne — příprava na páteční sprint.",
+      "Odpoledne ve čtvrtek: čas na ty důležité hovory.",
+      "Zákazníci v čtvrtek odpoledne rádi přijímají dobré nabídky.",
+      "Čtvrteční odpoledne je zlatá hodinka pro uzavírání dealů.",
+      "Jeden den do víkendu — ať se to počítá.",
+      "Čtvrtek odpoledne: kdo makám teď, relaxuje v pátek.",
+    ],
+    vecer: [
+      "Čtvrteční večer: zítra je pátek. To zní dobře, ne?",
+      "Čtyři dny za tebou. Jeden zlatý před tebou.",
+      "Večer ve čtvrtek — připrav se na páteční dojezd.",
+      "Čtvrteční večer: zkontroluj pipeline, připrav schůzky.",
+      "Zítra je pátek. Ale nejdřív dokonči čtvrtek.",
+      "Čtyři dny odvedené práce. Zítřek bude vínová třešnička.",
+      "Čtvrtek večer: plán na pátek je základ úspěchu.",
+      "Jeden den do víkendu. Stojí to za jeden dobrý večer.",
+      "Čtvrteční večer patří těm, co se těší na výsledky.",
+      "Dobré ráno zítra začíná dobrým večerem dnes.",
+    ],
+  },
+  pa: {
+    rano: [
+      "Pátek! Finišuj silně — víkend je odměna pro ty, co makali.",
+      "Páteční ráno: poslední šance udělat z týdne něco výjimečného.",
+      "Pátek ráno voní po uzavřených dealech a zaslouženém odpočinku.",
+      "Pátý den, pátá rychlost. Jedeme!",
+      "Páteční ráno: zákazníci chtějí mít vše hotovo před víkendem.",
+      "Pátek ráno — dnes se počítá každý telefonát.",
+      "Poslední pracovní ráno v týdnu. Udělej ho velkým.",
+      "Pátek ráno je pro ty, co nevzdali ani v úterý.",
+      "Páteční ráno: víkend vidíš na obzoru. Ale nejdřív jeden velký den.",
+      "Pátek ráno — co neuzavřeš dnes, uzavřeš v pondělí. Volba je tvoje.",
+    ],
+    dopoledne: [
+      "Páteční dopoledne: zákazníci chtějí mít vše vyřízeno před víkendem.",
+      "Dopoledne v pátek — deadline efekt na maximum.",
+      "Pátek dopoledne: zákazníci rozhodují rychle. Využij to.",
+      "Poslední dopoledne týdne. Ať se to počítá.",
+      "Páteční dopoledne je zlaté — zákazníci řeší věci, než odejdou.",
+      "Dopoledne v pátek: uzavři, co jsi celý týden budoval.",
+      "Pátek dopoledne = nejrychlejší rozhodování zákazníků.",
+      "Kdo zavolá v pátek dopoledne, bývá příjemně překvapen.",
+      "Páteční dopoledne: sprint před cílem.",
+      "Dnes dopoledne máš šanci uzavřít skvělý týden.",
+    ],
+    odpoledne: [
+      "Páteční odpoledne — ještě jsi v práci, a to o tobě leccos říká.",
+      "Odpoledne v pátek: zákazníci jsou v pohodové náladě. Snad.",
+      "Páteční odpoledne: co zbývá, to uzavři.",
+      "Odpoledne v pátek je pro ty, co to myslí vážně.",
+      "Pátek odpoledne: víkend je blízko, ale práce ještě ne.",
+      "Poslední hodiny týdne. Udělejme je smysluplnými.",
+      "Páteční odpoledne: zákazníci jsou přístupní a uvolnění.",
+      "Odpoledne v pátek = čas na finální tahy.",
+      "Kdo maká v pátek odpoledne, má čisté svědomí o víkendu.",
+      "Páteční odpoledne: ať skončíš s úsměvem.",
+    ],
+    vecer: [
+      "Páteční večer: týden za tebou, víkend před tebou. Zasloužíš si ho.",
+      "Pět dní odvedené práce. Dnes večer odpočiň.",
+      "Pátek večer — čas zavřít CRM a otevřít lednici.",
+      "Dobrý týden? Skvělý. Špatný týden? Příští bude lepší.",
+      "Páteční večer patří tobě. CRM může počkat do pondělí.",
+      "Týden hotový. Co zbývá, vyřeší pondělí.",
+      "Pátek večer: nejlepší část pracovního týdne.",
+      "Pět dní, spousta hovorů, pár dealů. To je správný rytmus.",
+      "Páteční večer — nezapomeň si poznamenat, co se povedlo.",
+      "Dobrý víkend začíná dobrým pátečním večerem.",
+    ],
+  },
+};
+
+const getGreeting = (firstName) => {
+  const now = new Date();
+  const hour = now.getHours();
+  const day = now.getDay(); // 0=Ne, 1=Po, ..., 5=Pá, 6=So
+  const dayKey = ["po","po","po","ut","st","ct","pa","pa","pa","po"][day] ||
+    (day === 1 ? "po" : day === 2 ? "ut" : day === 3 ? "st" : day === 4 ? "ct" : "pa");
+  const actualKey = day === 0 || day === 6
+    ? "po"
+    : ["","po","ut","st","ct","pa"][day];
+  const timeKey = hour < 10 ? "rano" : hour < 13 ? "dopoledne" : hour < 17 ? "odpoledne" : "vecer";
+  const pool = GREETINGS[actualKey]?.[timeKey] || GREETINGS.po.rano;
+  // Deterministický výběr podle data - jiný každý den
+  const dayOfYear = Math.floor((now - new Date(now.getFullYear(),0,0)) / 86400000);
+  const idx = dayOfYear % pool.length;
+  const text = pool[idx];
+  // Přidej jméno na začátek (náhodně, ne vždy)
+  const withName = dayOfYear % 3 !== 0;
+  return withName ? `${firstName}, ${text.charAt(0).toLowerCase()}${text.slice(1)}` : text;
+};
+
 // --- DASHBOARD ---
 const Dashboard = ({data, profile, onNavigate}) => {
   const {companies,contacts,deals,tasks,profiles} = data;
@@ -760,6 +1035,7 @@ const Dashboard = ({data, profile, onNavigate}) => {
   const totalActivity = activityByDay.reduce((a,b)=>a+b,0);
 
   const firstName = profile?.full_name?.split(" ")[0] || "obchodníku";
+  const greetingText = getGreeting(firstName);
 
   const Stat = ({icon,label,value,sub,color,onClick}) => (
     <div onClick={onClick} style={{background:C.white,border:`1px solid ${C.border}`,borderRadius:12,padding:"18px 20px",flex:1,minWidth:140,cursor:onClick?"pointer":"default",borderTop:`3px solid ${color}`,boxShadow:"0 1px 4px rgba(0,0,0,0.06)",transition:"all 0.2s"}}
@@ -851,7 +1127,7 @@ const Dashboard = ({data, profile, onNavigate}) => {
 
       <div style={{marginBottom:16,padding:"16px 16px",background:C.white,borderRadius:12,border:`1px solid ${C.border}`,boxShadow:"0 1px 4px rgba(0,0,0,0.06)"}}>
         <div style={{fontSize:11,color:C.textDim,marginBottom:3,fontWeight:500}}>{new Date().toLocaleDateString("cs-CZ",{weekday:"long",year:"numeric",month:"long",day:"numeric"})}</div>
-        <h1 style={{margin:0,fontSize:24,fontWeight:800,color:C.text}}>Dobrý den, {firstName} 👋</h1>
+        <h1 style={{margin:0,fontSize:22,fontWeight:800,color:C.text,lineHeight:1.2}}>{greetingText}</h1>
         <p style={{margin:"4px 0 0",color:C.textMuted,fontSize:13}}>Přehled VZV pipeline · VIVA Lovosice{profile?.region?` · ${profile.region} region`:""}</p>
       </div>
 
