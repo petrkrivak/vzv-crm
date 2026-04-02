@@ -132,6 +132,11 @@ const REGIONS = ["Ústecký","Liberecký","Středočeský","Jiný"];
 
 const uid = () => Math.random().toString(36).slice(2,9);
 const today = () => new Date().toISOString().split("T")[0];
+const nextWorkday = () => {
+  const d = new Date();
+  d.setDate(d.getDate() + (d.getDay() === 5 ? 3 : d.getDay() === 6 ? 2 : 1));
+  return d.toISOString().split("T")[0];
+};
 const clean = (obj) => Object.fromEntries(Object.entries(obj).map(([k,v])=>[k, v===""?null:v]));
 const fmtDate = (d) => d ? new Date(d).toLocaleDateString("cs-CZ",{day:"2-digit",month:"2-digit",year:"numeric"}) : "—";
 const fmtMoney = (n) => n ? new Intl.NumberFormat("cs-CZ",{style:"currency",currency:"CZK",maximumFractionDigits:0}).format(n) : "—";
@@ -771,8 +776,79 @@ const Dashboard = ({data, profile, onNavigate}) => {
     </div>
   );
 
+  const todayStr = today();
+  const nextWd = nextWorkday();
+  const activeTasks = myTasks.filter(t => ["Plánováno","Probíhá"].includes(t.status));
+  const tasksToday = activeTasks.filter(t => t.date === todayStr).sort((a,b) => (a.time||"").localeCompare(b.time||""));
+  const tasksNextWd = activeTasks.filter(t => t.date === nextWd).sort((a,b) => (a.time||"").localeCompare(b.time||""));
+  const taskTypeColors = {Telefonát:C.warning, Návštěva:C.accent, "E-mail":C.info, Nabídka:C.purple, Prezentace:C.info};
+  const fmtNextWd = new Date(nextWd).toLocaleDateString("cs-CZ",{weekday:"long",day:"numeric",month:"numeric"});
+
   return (
     <div>
+      {/* === ÚKOLY — mobilní přehled === */}
+      <div style={{background:C.white,border:`1px solid ${C.border}`,borderRadius:12,marginBottom:16,overflow:"hidden",boxShadow:"0 1px 4px rgba(0,0,0,0.06)"}}>
+        {/* Dnes */}
+        <div style={{padding:"12px 16px 8px",borderBottom:`1px solid ${C.border}`}}>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
+            <div style={{fontSize:12,fontWeight:700,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.5px"}}>Dnes</div>
+            <button onClick={()=>onNavigate("tasks","new")} style={{background:C.accentLight,border:`1px solid ${C.accent}30`,color:C.accent,borderRadius:6,padding:"3px 10px",fontSize:11,fontWeight:600,cursor:"pointer"}}>+ Přidat</button>
+          </div>
+          {overdue.length > 0 && overdue.map(t => {
+            const co = companies.find(c=>c.id===t.company_id);
+            return (
+              <div key={t.id} style={{display:"flex",alignItems:"center",gap:8,padding:"7px 10px",background:"#FEF2F2",borderRadius:8,marginBottom:5,borderLeft:`3px solid ${C.danger}`}}>
+                <span style={{fontSize:11,color:C.danger,fontWeight:700,flexShrink:0}}>⚠</span>
+                <div style={{flex:1,minWidth:0}}>
+                  <div style={{fontSize:13,color:C.danger,fontWeight:600,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{t.title}</div>
+                  {co && <div style={{fontSize:11,color:`${C.danger}99`}}>{co.name} · {fmtDate(t.date)}</div>}
+                </div>
+              </div>
+            );
+          })}
+          {tasksToday.length === 0 && overdue.length === 0 && (
+            <div style={{fontSize:13,color:C.textDim,padding:"6px 0 4px"}}>Žádné úkoly na dnes 🎉</div>
+          )}
+          {tasksToday.map(t => {
+            const co = companies.find(c=>c.id===t.company_id);
+            const color = taskTypeColors[t.type] || C.border;
+            return (
+              <div key={t.id} style={{display:"flex",alignItems:"center",gap:10,padding:"8px 0",borderBottom:`1px solid ${C.border}`}}>
+                <div style={{fontSize:12,color:C.textDim,minWidth:36,fontWeight:500,flexShrink:0}}>{t.time||"—"}</div>
+                <div style={{width:3,height:32,borderRadius:2,background:color,flexShrink:0}}/>
+                <div style={{flex:1,minWidth:0}}>
+                  <div style={{fontSize:13,color:C.text,fontWeight:600,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{t.title}</div>
+                  {co && <div style={{fontSize:11,color:C.textDim,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{co.name}</div>}
+                </div>
+                <span style={{...s.badge(color),fontSize:10,padding:"2px 7px",flexShrink:0}}>{t.type}</span>
+              </div>
+            );
+          })}
+        </div>
+        {/* Příští pracovní den */}
+        <div style={{padding:"10px 16px 12px"}}>
+          <div style={{fontSize:12,fontWeight:700,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.5px",marginBottom:8,textTransform:"capitalize"}}>{fmtNextWd}</div>
+          {tasksNextWd.length === 0 && (
+            <div style={{fontSize:13,color:C.textDim}}>Žádné naplánované úkoly</div>
+          )}
+          {tasksNextWd.map(t => {
+            const co = companies.find(c=>c.id===t.company_id);
+            const color = taskTypeColors[t.type] || C.border;
+            return (
+              <div key={t.id} style={{display:"flex",alignItems:"center",gap:10,padding:"7px 0",borderBottom:`1px solid ${C.border}`}}>
+                <div style={{fontSize:12,color:C.textDim,minWidth:36,fontWeight:500,flexShrink:0}}>{t.time||"—"}</div>
+                <div style={{width:3,height:32,borderRadius:2,background:color,flexShrink:0}}/>
+                <div style={{flex:1,minWidth:0}}>
+                  <div style={{fontSize:13,color:C.text,fontWeight:600,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{t.title}</div>
+                  {co && <div style={{fontSize:11,color:C.textDim,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{co.name}</div>}
+                </div>
+                <span style={{...s.badge(color),fontSize:10,padding:"2px 7px",flexShrink:0}}>{t.type}</span>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
       <div style={{marginBottom:16,padding:"16px 16px",background:C.white,borderRadius:12,border:`1px solid ${C.border}`,boxShadow:"0 1px 4px rgba(0,0,0,0.06)"}}>
         <div style={{fontSize:11,color:C.textDim,marginBottom:3,fontWeight:500}}>{new Date().toLocaleDateString("cs-CZ",{weekday:"long",year:"numeric",month:"long",day:"numeric"})}</div>
         <h1 style={{margin:0,fontSize:24,fontWeight:800,color:C.text}}>Dobrý den, {firstName} 👋</h1>
