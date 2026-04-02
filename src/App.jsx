@@ -1062,6 +1062,15 @@ const Dashboard = ({data, profile, onNavigate}) => {
 
   return (
     <div>
+
+      <div style={{marginBottom:16,padding:"14px 16px",background:C.white,borderRadius:12,border:`1px solid ${C.border}`,boxShadow:"0 1px 4px rgba(0,0,0,0.06)",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+        <div>
+          <h1 style={{margin:0,fontSize:20,fontWeight:800,color:C.text}}>Dobrý den, {firstName} 👋</h1>
+          <div style={{fontSize:11,color:C.textDim,marginTop:3}}>{new Date().toLocaleDateString("cs-CZ",{weekday:"long",day:"numeric",month:"long"})}</div>
+        </div>
+        <div style={{fontSize:11,color:C.textMuted,textAlign:"right"}}>{profile?.region?`${profile.region} region`:""}</div>
+      </div>
+
       {/* === ÚKOLY — mobilní přehled === */}
       <div style={{background:C.white,border:`1px solid ${C.border}`,borderRadius:12,marginBottom:16,overflow:"hidden",boxShadow:"0 1px 4px rgba(0,0,0,0.06)"}}>
         {/* Dnes */}
@@ -1125,11 +1134,6 @@ const Dashboard = ({data, profile, onNavigate}) => {
         </div>
       </div>
 
-      <div style={{marginBottom:16,padding:"16px 16px",background:C.white,borderRadius:12,border:`1px solid ${C.border}`,boxShadow:"0 1px 4px rgba(0,0,0,0.06)"}}>
-        <div style={{fontSize:11,color:C.textDim,marginBottom:3,fontWeight:500}}>{new Date().toLocaleDateString("cs-CZ",{weekday:"long",year:"numeric",month:"long",day:"numeric"})}</div>
-        <h1 style={{margin:0,fontSize:22,fontWeight:800,color:C.text,lineHeight:1.2}}>{greetingText}</h1>
-        <p style={{margin:"4px 0 0",color:C.textMuted,fontSize:13}}>Přehled VZV pipeline · VIVA Lovosice{profile?.region?` · ${profile.region} region`:""}</p>
-      </div>
 
       <div className="stat-row" style={{display:"flex",gap:12,flexWrap:"wrap",marginBottom:16}}>
         <Stat icon={Icons.building} label="Firmy" value={companies.length} sub={`${companies.filter(c=>c.status==="Zákazník").length} zákazníků`} color={C.info} onClick={()=>onNavigate("companies")}/>
