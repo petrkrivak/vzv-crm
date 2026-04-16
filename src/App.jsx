@@ -1026,10 +1026,17 @@ const Dashboard = ({data, profile, onNavigate}) => {
   const won = deals.filter(d=>d.status==="Vyhráno").reduce((s,d)=>s+(d.value||0),0);
   const overdue = myTasks.filter(t=>isOverdue(t.date,t.status));
   const todayTasks = myTasks.filter(t=>t.date===today()&&["Plánováno","Probíhá"].includes(t.status)).sort((a,b)=>(a.time||"").localeCompare(b.time||""));
-  const upcoming = myTasks.filter(t=>t.status==="Plánováno"&&t.date>today()).sort((a,b)=> filter==="Dokončeno"
-  ? (b.date||"").localeCompare(a.date||"")
-  : (a.date||"").localeCompare(b.date||"")
-);
+  const upcoming = myTasks.filter(t=>t.status==="Plánováno"&&t.date>today())const sortDesc = filter === "Dokončeno";
+const filtered = data.tasks.filter(t=>{
+    if(filter==="Aktivní") return ["Plánováno","Probíhá"].includes(t.status);
+    if(filter==="Dnes") return t.date===today()&&["Plánováno","Probíhá"].includes(t.status);
+    if(filter==="Po termínu") return isOverdue(t.date,t.status);
+    if(filter==="Dokončeno") return t.status==="Dokončeno";
+    return true;
+  }).sort((a,b)=> sortDesc
+    ? (b.date||"").localeCompare(a.date||"")
+    : (a.date||"").localeCompare(b.date||"")
+  );
 
   const days = Array.from({length:7},(_,i)=>{ const d=new Date(); d.setDate(d.getDate()-6+i); return d.toISOString().split("T")[0]; });
   const dayLabels = Array.from({length:7},(_,i)=>{ const d=new Date(); d.setDate(d.getDate()-6+i); return ["Ne","Po","Út","St","Čt","Pá","So"][d.getDay()]; });
