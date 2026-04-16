@@ -1005,7 +1005,10 @@ const Companies = ({ data, ops, focusId, onClearFocus }) => {
   const [gcalTask, setGcalTask] = useState(null);
   const [search, setSearch] = useState("");
   const [companyFilter, setCompanyFilter] = useState("Vše"); // přejmenováno z filter
-  const [detail, setDetail] = useState(focusId && focusId !== "new" ? focusId : null);
+  const [detail, setDetail] = useState(() => {
+  if (focusId && focusId !== "new") return focusId;
+  return localStorage.getItem("vzv_last_company") || null;
+});
   const [viewedAt, setViewedAtState] = useState(getViewedAt);
 
   useEffect(() => {
@@ -1014,9 +1017,15 @@ const Companies = ({ data, ops, focusId, onClearFocus }) => {
   }, [focusId]);
 
   const handleSetDetail = (id) => {
-    if (id) { recordViewedAt(id); setViewedAtState(getViewedAt()); }
-    setDetail(id);
-  };
+  if (id) {
+    recordViewedAt(id);
+    setViewedAtState(getViewedAt());
+    localStorage.setItem("vzv_last_company", id);
+  } else {
+    localStorage.removeItem("vzv_last_company");
+  }
+  setDetail(id);
+};
 
   const companyNames = data.companies.map(c => c.name);
   const filtered = data.companies
