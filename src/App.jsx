@@ -1086,7 +1086,9 @@ const Dashboard = ({data, profile, onNavigate}) => {
                 <span style={{fontSize:11,color:C.danger,fontWeight:700,flexShrink:0}}>⚠</span>
                 <div style={{flex:1,minWidth:0}}>
                   <div style={{fontSize:13,color:C.danger,fontWeight:600,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{t.title}</div>
-                  {co && <div style={{fontSize:11,color:`${C.danger}99`}}>{co.name} · {fmtDate(t.date)}</div>}
+                  {co && <div style={{fontSize:11,color:`${C.danger}99`}}>
+  <span onClick={()=>onNavigate("companies",co.id)} style={{cursor:"pointer",textDecoration:"underline",textDecorationColor:`${C.danger}55`}}>{co.name}</span> · {fmtDate(t.date)}
+</div>}
                 </div>
               </div>
             );
@@ -1103,7 +1105,9 @@ const Dashboard = ({data, profile, onNavigate}) => {
                 <div style={{width:3,height:32,borderRadius:2,background:color,flexShrink:0}}/>
                 <div style={{flex:1,minWidth:0}}>
                   <div style={{fontSize:13,color:C.text,fontWeight:600,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{t.title}</div>
-                  {co && <div style={{fontSize:11,color:C.textDim,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{co.name}</div>}
+                  {co && <div style={{fontSize:11,color:C.textDim,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
+  <span onClick={()=>onNavigate("companies",co.id)} style={{cursor:"pointer",color:C.accent,fontWeight:600}}>{co.name}</span>
+</div>}
                 </div>
                 <span style={{...s.badge(color),fontSize:10,padding:"2px 7px",flexShrink:0}}>{t.type}</span>
               </div>
@@ -1184,7 +1188,10 @@ const Dashboard = ({data, profile, onNavigate}) => {
                 <div style={{fontSize:11,color:C.danger,fontWeight:700,minWidth:28}}>⚠</div>
                 <div style={{flex:1,minWidth:0}}>
                   <div style={{fontSize:12,color:C.danger,fontWeight:500,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{t.title}</div>
-                  <div style={{fontSize:10,color:`${C.danger}99`}}>{company?.name} · {fmtDate(t.date)}</div>
+                  <div style={{fontSize:10,color:`${C.danger}99`}}>
+  {company && <span onClick={()=>onNavigate("companies",company.id)} style={{cursor:"pointer",textDecoration:"underline",textDecorationColor:`${C.danger}55`}}>{company.name}</span>}
+  {company && " · "}{fmtDate(t.date)}
+</div>
                 </div>
               </div>
             );
@@ -1198,7 +1205,9 @@ const Dashboard = ({data, profile, onNavigate}) => {
                 <div style={{fontSize:11,color:C.textDim,minWidth:36,fontWeight:500}}>{t.time||"—"}</div>
                 <div style={{flex:1,minWidth:0}}>
                   <div style={{fontSize:12,color:C.text,fontWeight:500,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{t.title}</div>
-                  <div style={{fontSize:10,color:C.textDim}}>{company?.name}</div>
+                  <div style={{fontSize:10,color:C.textDim}}>
+  {company && <span onClick={()=>onNavigate("companies",company.id)} style={{cursor:"pointer",color:C.accent,fontWeight:600}}>{company.name}</span>}
+</div>
                 </div>
                 <span style={{...s.badge(typeColors[t.type]||C.textDim),fontSize:10,padding:"1px 6px"}}>{t.type}</span>
               </div>
