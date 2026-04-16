@@ -1590,7 +1590,7 @@ const Deals = ({data,ops}) => {
 };
 
 // --- TASKS ---
-const Tasks = ({data,ops,profile}) => {
+const Tasks = ({data,ops,profile,onNavigateToCompany}) => {
   const [modal,setModal] = useState(null);
   const [gcalTask,setGcalTask] = useState(null);
   const [filter,setFilter] = useState("Aktivní");
@@ -1624,7 +1624,12 @@ const Tasks = ({data,ops,profile}) => {
               <StatusBadge status={t.status}/>
             </div>
             <div style={{fontSize:12,color:C.textMuted,display:"flex",gap:6,flexWrap:"wrap",marginBottom:6}}>
-              {company&&<span>{company.name}</span>}
+              {company && (
+  <span
+    onClick={e => { e.stopPropagation(); onNavigateToCompany(company.id); }}
+    style={{ color: C.accent, cursor: "pointer", fontWeight: 600, textDecoration: "underline", textDecorationColor: `${C.accent}55` }}
+  >{company.name}</span>
+)}
               {contact&&<span>· {contact.name}</span>}
               <span style={{color:od?C.danger:C.textDim,fontWeight:od?600:400}}>· {fmtDate(t.date)}{t.time?` · ${t.time}`:""}{od?" ⚠":""}</span>
             </div>
@@ -1864,7 +1869,7 @@ export default function App() {
         {page==="companies"&&<Companies data={data} ops={ops} focusId={focusId} onClearFocus={()=>setFocusId(null)}/>}
         {page==="contacts"&&<Contacts data={data} ops={ops} onNavigateToCompany={(id)=>navigate("companies",id)}/>}
         {page==="deals"&&<Deals data={data} ops={ops}/>}
-        {page==="tasks"&&<Tasks data={data} ops={ops} profile={profile}/>}
+        {page==="tasks"&&<Tasks data={data} ops={ops} profile={profile} onNavigateToCompany={(id)=>navigate("companies",id)}/>}
         {page==="users"&&profile?.role==="admin"&&<UserManagement session={session} profiles={data.profiles} onRefresh={loadAll}/>}
       </div>
     </div>
