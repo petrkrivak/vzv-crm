@@ -1386,18 +1386,49 @@ const AI_SUGGESTIONS = [
   "Který rozhodovatel si zaslouží pozornost tento týden?",
 ];
 
-const callAIAssistant = async (session, body) => {
+const callAIAssistant = async (session, body, retryCount = 0) => {
+  // Použij nejčerstvější session (mohl ji mezitím obnovit jiný požadavek)
+  let activeSession = getStoredSession() || session;
+
+  // Proaktivně obnov access token, pokud vypršel
+  if (isTokenExpired(activeSession) && activeSession?.refresh_token) {
+    try {
+      activeSession = await refreshSession(activeSession.refresh_token);
+      storeSession(activeSession);
+    } catch {
+      storeSession(null);
+      window.location.reload();
+      throw new Error("Session vypršela, přihlaste se znovu.");
+    }
+  }
+
   const res = await fetch(`${SUPABASE_URL}/functions/v1/ai-assistant`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      "Authorization": `Bearer ${session.access_token}`,
+      "Authorization": `Bearer ${activeSession.access_token}`,
       "apikey": SUPABASE_KEY,
     },
     body: JSON.stringify(body),
   });
+
   if (!res.ok) {
     const errText = await res.text();
+
+    // Retry na 401 nebo JWT expired (pokud token vypršel těsně během requestu)
+    const jwtExpired = errText.includes("JWT expired") || res.status === 401;
+    if (retryCount === 0 && jwtExpired && activeSession?.refresh_token) {
+      try {
+        const newSession = await refreshSession(activeSession.refresh_token);
+        storeSession(newSession);
+        return callAIAssistant(newSession, body, 1);
+      } catch {
+        storeSession(null);
+        window.location.reload();
+        throw new Error("Session vypršela, přihlaste se znovu.");
+      }
+    }
+
     throw new Error(`AI chyba (${res.status}): ${errText}`);
   }
   return res.json();
