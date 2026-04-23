@@ -1428,11 +1428,14 @@ const AIMessage = ({ role, content }) => {
   );
 };
 
-const AIAssistant = ({ session }) => {
+const AIAssistant = ({ session, data, ops }) => {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [saveModal, setSaveModal] = useState(null); // null | "loading" | { company_id, type, text, reasoning }
+  const [saveError, setSaveError] = useState("");
+  const [savedBanner, setSavedBanner] = useState("");
   const scrollRef = useRef(null);
 
   useEffect(() => {
@@ -1449,12 +1452,12 @@ const AIAssistant = ({ session }) => {
     setError("");
     try {
       const history = messages.map(m => ({ role: m.role, content: m.content }));
-      const data = await callAIAssistant(session, {
+      const res = await callAIAssistant(session, {
         mode: "chat",
         message: text.trim(),
         history,
       });
-      setMessages([...newMessages, { role: "assistant", content: data.reply || "(prázdná odpověď)" }]);
+      setMessages([...newMessages, { role: "assistant", content: res.reply || "(prázdná odpověď)" }]);
     } catch (e) {
       setError(e.message);
     } finally {
@@ -1464,15 +1467,78 @@ const AIAssistant = ({ session }) => {
 
   const clear = () => { setMessages([]); setError(""); };
 
+  const requestSave = async () => {
+    if (messages.length === 0) return;
+    setSaveModal("loading");
+    setSaveError("");
+    try {
+      const history = messages.map(m => ({ role: m.role, content: m.content }));
+      const res = await callAIAssistant(session, {
+        mode: "summarize",
+        history,
+      });
+      const summary = res.summary || {};
+      setSaveModal({
+        company_id: summary.company_id || "",
+        type: summary.type || "email",
+        text: summary.text || "",
+        reasoning: summary.reasoning || "",
+      });
+    } catch (e) {
+      setSaveError(e.message);
+      setSaveModal(null);
+    }
+  };
+
+  const updateSaveField = (k, v) => {
+    setSaveModal(prev => (prev && prev !== "loading" ? { ...prev, [k]: v } : prev));
+  };
+
+  const doSaveNote = async () => {
+    if (!saveModal || saveModal === "loading") return;
+    const { company_id, type, text } = saveModal;
+    if (!company_id || !text.trim()) {
+      setSaveError("Vyber firmu a vyplň text poznámky.");
+      return;
+    }
+    const company = data.companies.find(c => c.id === company_id);
+    if (!company) { setSaveError("Firma nenalezena."); return; }
+    try {
+      await ops.upsertCompany({
+        ...company,
+        notes: [...(company.notes || []), {
+          text: text.trim(),
+          type,
+          date: today(),
+        }],
+      });
+      setSavedBanner(`✓ Uloženo k firmě ${company.name}`);
+      setSaveModal(null);
+      setMessages([]);
+      setTimeout(() => setSavedBanner(""), 5000);
+    } catch (e) {
+      setSaveError(`Chyba při ukládání: ${e.message}`);
+    }
+  };
+
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "calc(100vh - 110px)", maxHeight: 820 }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12, flexShrink: 0 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12, flexShrink: 0, gap: 8, flexWrap: "wrap" }}>
         <div>
           <h2 style={{ margin: 0, fontSize: 20, fontWeight: 700, color: C.text }}>Asistent</h2>
           <div style={{ fontSize: 12, color: C.textMuted, marginTop: 2 }}>Vidí stav tvé pipeline. Zeptej se ho na cokoli.</div>
         </div>
-        {messages.length > 0 && <button onClick={clear} style={{ ...s.btn("ghost"), fontSize: 12 }}>Nová konverzace</button>}
+        {messages.length > 0 && (
+          <div style={{ display: "flex", gap: 6 }}>
+            <button onClick={requestSave} disabled={loading || saveModal === "loading"} style={{ ...s.btn("primary"), fontSize: 12, padding: "7px 12px", opacity: (loading || saveModal === "loading") ? 0.5 : 1 }}>
+              <Icon d={Icons.building} size={12} />Uložit k firmě
+            </button>
+            <button onClick={clear} style={{ ...s.btn("ghost"), fontSize: 12 }}>Nová konverzace</button>
+          </div>
+        )}
       </div>
+
+      {savedBanner && <div style={{ background: `${C.success}12`, border: `1px solid ${C.success}30`, borderRadius: 8, padding: "9px 14px", fontSize: 13, color: C.success, fontWeight: 600, marginBottom: 10 }}>{savedBanner}</div>}
 
       <div ref={scrollRef} style={{ flex: 1, overflowY: "auto", padding: "12px 4px", background: C.bg, borderRadius: 12, border: `1px solid ${C.border}`, marginBottom: 12 }}>
         {messages.length === 0 && !loading && (
@@ -1520,6 +1586,67 @@ const AIAssistant = ({ session }) => {
           Poslat
         </button>
       </div>
+
+      {saveModal === "loading" && (
+        <Modal title="Připravuji shrnutí…" onClose={() => setSaveModal(null)}>
+          <div style={{ textAlign: "center", padding: "30px 0" }}>
+            <div style={{ width: 34, height: 34, border: `3px solid ${C.border}`, borderTopColor: C.accent, borderRadius: "50%", animation: "spin 0.8s linear infinite", margin: "0 auto 14px" }} />
+            <div style={{ color: C.textMuted, fontSize: 13 }}>Asistent čte konverzaci a hledá firmu…</div>
+          </div>
+        </Modal>
+      )}
+
+      {saveModal && saveModal !== "loading" && (
+        <Modal
+          title="Uložit shrnutí k firmě"
+          onClose={() => setSaveModal(null)}
+          onSave={doSaveNote}
+          saveLabel="Uložit poznámku"
+          saveDisabled={!saveModal.company_id || !saveModal.text.trim()}
+        >
+          {saveModal.reasoning && (
+            <div style={{ background: C.accentLight, border: `1px solid ${C.accent}30`, borderRadius: 8, padding: "9px 12px", fontSize: 12, color: C.accentDark, marginBottom: 14, lineHeight: 1.5 }}>
+              <span style={{ fontWeight: 700 }}>💡 Návrh asistenta: </span>{saveModal.reasoning}
+            </div>
+          )}
+          <Field label="Firma *">
+            <Sel
+              options={data.companies}
+              withEmpty
+              emptyLabel="— vyber firmu —"
+              value={saveModal.company_id}
+              onChange={e => updateSaveField("company_id", e.target.value)}
+            />
+          </Field>
+          <Field label="Typ poznámky">
+            <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+              {Object.entries(NOTE_TYPES).map(([k, t]) => (
+                <button
+                  key={k}
+                  onClick={() => updateSaveField("type", k)}
+                  style={{
+                    flex: "1 0 auto", minWidth: 70, padding: "7px 10px", borderRadius: 6, fontSize: 12, fontWeight: 600, cursor: "pointer",
+                    border: `1.5px solid ${saveModal.type === k ? t.stroke : C.border}`,
+                    background: saveModal.type === k ? t.bg : C.white,
+                    color: saveModal.type === k ? t.color : C.textMuted,
+                    transition: "all 0.15s",
+                  }}
+                >{t.label}</button>
+              ))}
+            </div>
+          </Field>
+          <Field label="Shrnutí">
+            <textarea
+              value={saveModal.text}
+              onChange={e => updateSaveField("text", e.target.value)}
+              placeholder="Shrnutí konverzace (2-3 věty)"
+              style={{ ...inp, minHeight: 110, resize: "vertical", lineHeight: 1.5 }}
+            />
+          </Field>
+          <div style={{ fontSize: 11, color: C.textDim, marginTop: -4 }}>Text klidně uprav před uložením.</div>
+          {saveError && <div style={{ background: `${C.danger}10`, border: `1px solid ${C.danger}30`, borderRadius: 8, padding: "8px 12px", fontSize: 12, color: C.danger, marginTop: 12 }}>⚠ {saveError}</div>}
+        </Modal>
+      )}
     </div>
   );
 };
@@ -1729,7 +1856,7 @@ export default function App() {
         {page === "deals" && <Deals data={data} ops={ops} />}
         {page === "tasks" && <Tasks data={data} ops={ops} profile={profile} onNavigateToCompany={(id) => navigate("companies", id)} />}
         {page === "users" && profile?.role === "admin" && <UserManagement session={session} profiles={data.profiles} onRefresh={loadAll} />}
-        {page === "assistant" && <AIAssistant session={session} />}
+        {page === "assistant" && <AIAssistant session={session} data={data} ops={ops} />}
       </div>
     </div>
   );
