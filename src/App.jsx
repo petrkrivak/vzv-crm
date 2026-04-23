@@ -166,6 +166,7 @@ const Icons = {
   shield: ["M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"],
   eye: ["M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z", "M12 9a3 3 0 100 6 3 3 0 000-6z"],
   eyeOff: ["M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19m-6.72-1.07a3 3 0 11-4.24-4.24", "M1 1l22 22"],
+  sparkle: "M12 2l2.4 7.4H22l-6.2 4.5L18.2 21 12 16.5 5.8 21l2.4-7.1L2 9.4h7.6z",
 };
 
 const inp = {
@@ -1376,6 +1377,153 @@ const Tasks = ({ data, ops, profile, onNavigateToCompany }) => {
   );
 };
 
+// --- AI ASISTENT ---
+const AI_SUGGESTIONS = [
+  "Jak jsem na tom dnes? Co mám udělat jako první?",
+  "Která stárnoucí nabídka je nejhorší? Připrav follow-up.",
+  "Shrň mi nejaktivnější firmu týdne.",
+  "Připrav osnovu hovoru na zítřek.",
+  "Který rozhodovatel si zaslouží pozornost tento týden?",
+];
+
+const callAIAssistant = async (session, body) => {
+  const res = await fetch(`${SUPABASE_URL}/functions/v1/ai-assistant`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${session.access_token}`,
+      "apikey": SUPABASE_KEY,
+    },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) {
+    const errText = await res.text();
+    throw new Error(`AI chyba (${res.status}): ${errText}`);
+  }
+  return res.json();
+};
+
+const AIMessage = ({ role, content }) => {
+  const isUser = role === "user";
+  return (
+    <div style={{ display: "flex", justifyContent: isUser ? "flex-end" : "flex-start", marginBottom: 10 }}>
+      {!isUser && (
+        <div style={{ width: 28, height: 28, borderRadius: "50%", background: C.accentLight, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, marginRight: 8 }}>
+          <Icon d={Icons.sparkle} size={14} stroke={C.accent} />
+        </div>
+      )}
+      <div style={{
+        maxWidth: "80%",
+        background: isUser ? C.accent : C.white,
+        color: isUser ? C.white : C.text,
+        border: isUser ? "none" : `1px solid ${C.border}`,
+        borderRadius: 12,
+        padding: "10px 14px",
+        fontSize: 14,
+        lineHeight: 1.55,
+        whiteSpace: "pre-wrap",
+        wordBreak: "break-word",
+      }}>{content}</div>
+    </div>
+  );
+};
+
+const AIAssistant = ({ session }) => {
+  const [messages, setMessages] = useState([]);
+  const [input, setInput] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const scrollRef = useRef(null);
+
+  useEffect(() => {
+    if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+  }, [messages, loading]);
+
+  const send = async (text) => {
+    if (!text.trim() || loading) return;
+    const userMsg = { role: "user", content: text.trim() };
+    const newMessages = [...messages, userMsg];
+    setMessages(newMessages);
+    setInput("");
+    setLoading(true);
+    setError("");
+    try {
+      const history = messages.map(m => ({ role: m.role, content: m.content }));
+      const data = await callAIAssistant(session, {
+        mode: "chat",
+        message: text.trim(),
+        history,
+      });
+      setMessages([...newMessages, { role: "assistant", content: data.reply || "(prázdná odpověď)" }]);
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const clear = () => { setMessages([]); setError(""); };
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", height: "calc(100vh - 110px)", maxHeight: 820 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12, flexShrink: 0 }}>
+        <div>
+          <h2 style={{ margin: 0, fontSize: 20, fontWeight: 700, color: C.text }}>Asistent</h2>
+          <div style={{ fontSize: 12, color: C.textMuted, marginTop: 2 }}>Vidí stav tvé pipeline. Zeptej se ho na cokoli.</div>
+        </div>
+        {messages.length > 0 && <button onClick={clear} style={{ ...s.btn("ghost"), fontSize: 12 }}>Nová konverzace</button>}
+      </div>
+
+      <div ref={scrollRef} style={{ flex: 1, overflowY: "auto", padding: "12px 4px", background: C.bg, borderRadius: 12, border: `1px solid ${C.border}`, marginBottom: 12 }}>
+        {messages.length === 0 && !loading && (
+          <div style={{ padding: "20px 12px", textAlign: "center" }}>
+            <div style={{ width: 48, height: 48, borderRadius: "50%", background: C.accentLight, display: "inline-flex", alignItems: "center", justifyContent: "center", marginBottom: 10 }}>
+              <Icon d={Icons.sparkle} size={22} stroke={C.accent} />
+            </div>
+            <div style={{ fontSize: 14, color: C.text, fontWeight: 600, marginBottom: 4 }}>Na co se chceš zeptat?</div>
+            <div style={{ fontSize: 12, color: C.textMuted, maxWidth: 400, margin: "0 auto 14px" }}>Mám přehled o tvých firmách, kontaktech, nabídkách i úkolech. Můžu ti pomoct s přípravou hovorů, LinkedIn zprávami, strategií nebo prostě shrnout, co je potřeba udělat.</div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 6, maxWidth: 440, margin: "0 auto" }}>
+              {AI_SUGGESTIONS.map((q, i) => (
+                <button key={i} onClick={() => send(q)} style={{ textAlign: "left", padding: "9px 14px", background: C.white, border: `1px solid ${C.border}`, borderRadius: 8, fontSize: 13, color: C.text, cursor: "pointer", transition: "all 0.15s" }}
+                  onMouseEnter={e => { e.currentTarget.style.borderColor = C.accent; e.currentTarget.style.background = C.accentLight; }}
+                  onMouseLeave={e => { e.currentTarget.style.borderColor = C.border; e.currentTarget.style.background = C.white; }}
+                >{q}</button>
+              ))}
+            </div>
+          </div>
+        )}
+        <div style={{ padding: "0 10px" }}>
+          {messages.map((m, i) => <AIMessage key={i} role={m.role} content={m.content} />)}
+          {loading && (
+            <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 14px", color: C.textMuted, fontSize: 13 }}>
+              <div style={{ width: 28, height: 28, borderRadius: "50%", background: C.accentLight, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <div style={{ width: 14, height: 14, border: `2px solid ${C.accent}30`, borderTopColor: C.accent, borderRadius: "50%", animation: "spin 0.8s linear infinite" }} />
+              </div>
+              Asistent přemýšlí…
+            </div>
+          )}
+        </div>
+      </div>
+
+      {error && <div style={{ background: `${C.danger}10`, border: `1px solid ${C.danger}30`, borderRadius: 8, padding: "8px 12px", fontSize: 12, color: C.danger, marginBottom: 8 }}>⚠ {error}</div>}
+
+      <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
+        <textarea
+          value={input}
+          onChange={e => setInput(e.target.value)}
+          onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(input); } }}
+          placeholder="Zeptej se na cokoli… (Enter = odeslat, Shift+Enter = nový řádek)"
+          disabled={loading}
+          style={{ ...inp, minHeight: 50, maxHeight: 140, resize: "vertical", fontSize: 14 }}
+        />
+        <button onClick={() => send(input)} disabled={loading || !input.trim()} style={{ ...s.btn("primary"), padding: "0 18px", opacity: (loading || !input.trim()) ? 0.5 : 1, flexShrink: 0 }}>
+          Poslat
+        </button>
+      </div>
+    </div>
+  );
+};
+
 // --- MAIN APP ---
 const NAV = [
   { id: "dashboard", label: "Přehled", icon: Icons.chart },
@@ -1383,9 +1531,10 @@ const NAV = [
   { id: "contacts", label: "Kontakty", icon: Icons.users },
   { id: "deals", label: "Pipeline", icon: Icons.target },
   { id: "tasks", label: "Úkoly", icon: Icons.check },
+  { id: "assistant", label: "Asistent", icon: Icons.sparkle },
 ];
 
-const VALID_PAGES = ["dashboard", "companies", "contacts", "deals", "tasks", "users"];
+const VALID_PAGES = ["dashboard", "companies", "contacts", "deals", "tasks", "users", "assistant"];
 
 export default function App() {
   const [session, setSession] = useState(null);
@@ -1580,6 +1729,7 @@ export default function App() {
         {page === "deals" && <Deals data={data} ops={ops} />}
         {page === "tasks" && <Tasks data={data} ops={ops} profile={profile} onNavigateToCompany={(id) => navigate("companies", id)} />}
         {page === "users" && profile?.role === "admin" && <UserManagement session={session} profiles={data.profiles} onRefresh={loadAll} />}
+        {page === "assistant" && <AIAssistant session={session} />}
       </div>
     </div>
   );
