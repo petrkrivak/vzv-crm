@@ -1378,15 +1378,96 @@ const Tasks = ({ data, ops, profile, onNavigateToCompany }) => {
 };
 
 // --- AI ASISTENT ---
+const AI_SUGGESTIONS = [
+  "Jak jsem na tom dnes? Co mám udělat jako první?",
+  "Která stárnoucí nabídka je nejhorší? Připrav follow-up.",
+  "Shrň mi nejaktivnější firmu týdne.",
+  "Připrav osnovu hovoru na zítřek.",
+  "Který rozhodovatel si zaslouží pozornost tento týden?",
+];
+
+const callAIAssistant = async (session, body, retryCount = 0) => {
+  // Použij nejčerstvější session (mohl ji mezitím obnovit jiný požadavek)
+  let activeSession = getStoredSession() || session;
+
+  // Proaktivně obnov access token, pokud vypršel
+  if (isTokenExpired(activeSession) && activeSession?.refresh_token) {
+    try {
+      activeSession = await refreshSession(activeSession.refresh_token);
+      storeSession(activeSession);
+    } catch {
+      storeSession(null);
+      window.location.reload();
+      throw new Error("Session vypršela, přihlaste se znovu.");
+    }
+  }
+
+  const res = await fetch(`${SUPABASE_URL}/functions/v1/ai-assistant`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${activeSession.access_token}`,
+      "apikey": SUPABASE_KEY,
+    },
+    body: JSON.stringify(body),
+  });
+
+  if (!res.ok) {
+    const errText = await res.text();
+
+    // Retry na 401 nebo JWT expired (pokud token vypršel těsně během requestu)
+    const jwtExpired = errText.includes("JWT expired") || res.status === 401;
+    if (retryCount === 0 && jwtExpired && activeSession?.refresh_token) {
+      try {
+        const newSession = await refreshSession(activeSession.refresh_token);
+        storeSession(newSession);
+        return callAIAssistant(newSession, body, 1);
+      } catch {
+        storeSession(null);
+        window.location.reload();
+        throw new Error("Session vypršela, přihlaste se znovu.");
+      }
+    }
+
+    throw new Error(`AI chyba (${res.status}): ${errText}`);
+  }
+  return res.json();
+};
+
+const AIMessage = ({ role, content }) => {
+  const isUser = role === "user";
+  return (
+    <div style={{ display: "flex", justifyContent: isUser ? "flex-end" : "flex-start", marginBottom: 10 }}>
+      {!isUser && (
+        <div style={{ width: 28, height: 28, borderRadius: "50%", background: C.accentLight, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, marginRight: 8 }}>
+          <Icon d={Icons.sparkle} size={14} stroke={C.accent} />
+        </div>
+      )}
+      <div style={{
+        maxWidth: "80%",
+        background: isUser ? C.accent : C.white,
+        color: isUser ? C.white : C.text,
+        border: isUser ? "none" : `1px solid ${C.border}`,
+        borderRadius: 12,
+        padding: "10px 14px",
+        fontSize: 14,
+        lineHeight: 1.55,
+        whiteSpace: "pre-wrap",
+        wordBreak: "break-word",
+      }}>{content}</div>
+    </div>
+  );
+};
+
 const AIAssistant = ({ session, data, ops }) => {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [saveModal, setSaveModal] = useState(null); // null | "loading" | { company_id, type, text, reasoning }
+  const [saveModal, setSaveModal] = useState(null);
   const [saveError, setSaveError] = useState("");
   const [savedBanner, setSavedBanner] = useState("");
-  const [memoryModal, setMemoryModal] = useState(null); // null | "loading" | { memories: [...] }
+  const [memoryModal, setMemoryModal] = useState(null);
   const [memoryError, setMemoryError] = useState("");
   const scrollRef = useRef(null);
 
@@ -1495,7 +1576,6 @@ const AIAssistant = ({ session, data, ops }) => {
     }
 
     try {
-      // Ulož všechny vybrané poznámky do ai_memory
       for (const mem of selected) {
         await sb("ai_memory", {
           method: "POST",
@@ -1634,7 +1714,6 @@ const AIAssistant = ({ session, data, ops }) => {
         </button>
       </div>
 
-      {/* MODAL: Loading memory suggestions */}
       {memoryModal === "loading" && (
         <Modal title="Analyzuji konverzaci…" onClose={() => setMemoryModal(null)}>
           <div style={{ textAlign: "center", padding: "30px 0" }}>
@@ -1644,7 +1723,6 @@ const AIAssistant = ({ session, data, ops }) => {
         </Modal>
       )}
 
-      {/* MODAL: Memory suggestions */}
       {memoryModal && memoryModal !== "loading" && (
         <Modal
           title="Co si mám zapamatovat?"
@@ -1714,7 +1792,6 @@ const AIAssistant = ({ session, data, ops }) => {
         </Modal>
       )}
 
-      {/* MODAL: Loading save summary */}
       {saveModal === "loading" && (
         <Modal title="Připravuji shrnutí…" onClose={() => setSaveModal(null)}>
           <div style={{ textAlign: "center", padding: "30px 0" }}>
@@ -1724,7 +1801,6 @@ const AIAssistant = ({ session, data, ops }) => {
         </Modal>
       )}
 
-      {/* MODAL: Save to company */}
       {saveModal && saveModal !== "loading" && (
         <Modal
           title="Uložit shrnutí k firmě"
