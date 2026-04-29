@@ -1378,87 +1378,6 @@ const Tasks = ({ data, ops, profile, onNavigateToCompany }) => {
 };
 
 // --- AI ASISTENT ---
-const AI_SUGGESTIONS = [
-  "Jak jsem na tom dnes? Co mám udělat jako první?",
-  "Která stárnoucí nabídka je nejhorší? Připrav follow-up.",
-  "Shrň mi nejaktivnější firmu týdne.",
-  "Připrav osnovu hovoru na zítřek.",
-  "Který rozhodovatel si zaslouží pozornost tento týden?",
-];
-
-const callAIAssistant = async (session, body, retryCount = 0) => {
-  // Použij nejčerstvější session (mohl ji mezitím obnovit jiný požadavek)
-  let activeSession = getStoredSession() || session;
-
-  // Proaktivně obnov access token, pokud vypršel
-  if (isTokenExpired(activeSession) && activeSession?.refresh_token) {
-    try {
-      activeSession = await refreshSession(activeSession.refresh_token);
-      storeSession(activeSession);
-    } catch {
-      storeSession(null);
-      window.location.reload();
-      throw new Error("Session vypršela, přihlaste se znovu.");
-    }
-  }
-
-  const res = await fetch(`${SUPABASE_URL}/functions/v1/ai-assistant`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "Authorization": `Bearer ${activeSession.access_token}`,
-      "apikey": SUPABASE_KEY,
-    },
-    body: JSON.stringify(body),
-  });
-
-  if (!res.ok) {
-    const errText = await res.text();
-
-    // Retry na 401 nebo JWT expired (pokud token vypršel těsně během requestu)
-    const jwtExpired = errText.includes("JWT expired") || res.status === 401;
-    if (retryCount === 0 && jwtExpired && activeSession?.refresh_token) {
-      try {
-        const newSession = await refreshSession(activeSession.refresh_token);
-        storeSession(newSession);
-        return callAIAssistant(newSession, body, 1);
-      } catch {
-        storeSession(null);
-        window.location.reload();
-        throw new Error("Session vypršela, přihlaste se znovu.");
-      }
-    }
-
-    throw new Error(`AI chyba (${res.status}): ${errText}`);
-  }
-  return res.json();
-};
-
-const AIMessage = ({ role, content }) => {
-  const isUser = role === "user";
-  return (
-    <div style={{ display: "flex", justifyContent: isUser ? "flex-end" : "flex-start", marginBottom: 10 }}>
-      {!isUser && (
-        <div style={{ width: 28, height: 28, borderRadius: "50%", background: C.accentLight, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, marginRight: 8 }}>
-          <Icon d={Icons.sparkle} size={14} stroke={C.accent} />
-        </div>
-      )}
-      <div style={{
-        maxWidth: "80%",
-        background: isUser ? C.accent : C.white,
-        color: isUser ? C.white : C.text,
-        border: isUser ? "none" : `1px solid ${C.border}`,
-        borderRadius: 12,
-        padding: "10px 14px",
-        fontSize: 14,
-        lineHeight: 1.55,
-        whiteSpace: "pre-wrap",
-        wordBreak: "break-word",
-      }}>{content}</div>
-    </div>
-  );
-};
-
 const AIAssistant = ({ session, data, ops }) => {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
@@ -1467,6 +1386,8 @@ const AIAssistant = ({ session, data, ops }) => {
   const [saveModal, setSaveModal] = useState(null); // null | "loading" | { company_id, type, text, reasoning }
   const [saveError, setSaveError] = useState("");
   const [savedBanner, setSavedBanner] = useState("");
+  const [memoryModal, setMemoryModal] = useState(null); // null | "loading" | { memories: [...] }
+  const [memoryError, setMemoryError] = useState("");
   const scrollRef = useRef(null);
 
   useEffect(() => {
@@ -1521,6 +1442,83 @@ const AIAssistant = ({ session, data, ops }) => {
     }
   };
 
+  const requestMemorySuggestions = async () => {
+    if (messages.length === 0) return;
+    setMemoryModal("loading");
+    setMemoryError("");
+    try {
+      const history = messages.map(m => ({ role: m.role, content: m.content }));
+      const res = await callAIAssistant(session, {
+        mode: "suggest_memory",
+        history,
+      });
+      const suggestions = res.suggestions || {};
+      const memories = (suggestions.memories || []).map(m => ({ ...m, selected: true }));
+      
+      if (memories.length === 0) {
+        setMemoryError("Asistent nenavrhuje nic k zapamatování z této konverzace.");
+        setMemoryModal(null);
+      } else {
+        setMemoryModal({ memories });
+      }
+    } catch (e) {
+      setMemoryError(e.message);
+      setMemoryModal(null);
+    }
+  };
+
+  const toggleMemory = (idx) => {
+    setMemoryModal(prev => {
+      if (!prev || prev === "loading") return prev;
+      const updated = [...prev.memories];
+      updated[idx] = { ...updated[idx], selected: !updated[idx].selected };
+      return { memories: updated };
+    });
+  };
+
+  const updateMemory = (idx, field, value) => {
+    setMemoryModal(prev => {
+      if (!prev || prev === "loading") return prev;
+      const updated = [...prev.memories];
+      updated[idx] = { ...updated[idx], [field]: value };
+      return { memories: updated };
+    });
+  };
+
+  const saveSelectedMemories = async () => {
+    if (!memoryModal || memoryModal === "loading") return;
+    const selected = memoryModal.memories.filter(m => m.selected && m.content.trim());
+    
+    if (selected.length === 0) {
+      setMemoryError("Vyber alespoň jednu poznámku k uložení.");
+      return;
+    }
+
+    try {
+      // Ulož všechny vybrané poznámky do ai_memory
+      for (const mem of selected) {
+        await sb("ai_memory", {
+          method: "POST",
+          body: JSON.stringify({
+            id: uid(),
+            user_id: session.user.id,
+            memory_type: mem.type,
+            entity_id: mem.entity_id || null,
+            content: mem.content.trim(),
+            importance: mem.importance || 5,
+          }),
+          headers: { "Prefer": "return=representation" }
+        }, session.access_token);
+      }
+
+      setSavedBanner(`✓ Uloženo ${selected.length} ${selected.length === 1 ? 'poznámka' : selected.length < 5 ? 'poznámky' : 'poznámek'} do paměti`);
+      setMemoryModal(null);
+      setTimeout(() => setSavedBanner(""), 5000);
+    } catch (e) {
+      setMemoryError(`Chyba při ukládání: ${e.message}`);
+    }
+  };
+
   const updateSaveField = (k, v) => {
     setSaveModal(prev => (prev && prev !== "loading" ? { ...prev, [k]: v } : prev));
   };
@@ -1552,6 +1550,20 @@ const AIAssistant = ({ session, data, ops }) => {
     }
   };
 
+  const memoryTypeLabels = {
+    personal: "Osobní preference",
+    deal_context: "Kontext dealu",
+    relationship: "Poznámka o vztahu",
+    learning: "Naučené"
+  };
+
+  const memoryTypeColors = {
+    personal: C.accent,
+    deal_context: C.warning,
+    relationship: C.info,
+    learning: C.purple
+  };
+
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "calc(100vh - 110px)", maxHeight: 820 }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12, flexShrink: 0, gap: 8, flexWrap: "wrap" }}>
@@ -1560,8 +1572,11 @@ const AIAssistant = ({ session, data, ops }) => {
           <div style={{ fontSize: 12, color: C.textMuted, marginTop: 2 }}>Vidí stav tvé pipeline. Zeptej se ho na cokoli.</div>
         </div>
         {messages.length > 0 && (
-          <div style={{ display: "flex", gap: 6 }}>
-            <button onClick={requestSave} disabled={loading || saveModal === "loading"} style={{ ...s.btn("primary"), fontSize: 12, padding: "7px 12px", opacity: (loading || saveModal === "loading") ? 0.5 : 1 }}>
+          <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+            <button onClick={requestMemorySuggestions} disabled={loading || memoryModal === "loading"} style={{ ...s.btn("primary"), fontSize: 12, padding: "7px 12px", opacity: (loading || memoryModal === "loading") ? 0.5 : 1 }}>
+              <Icon d={Icons.sparkle} size={12} />Zapamatovat si to
+            </button>
+            <button onClick={requestSave} disabled={loading || saveModal === "loading"} style={{ ...s.btn("ghost"), fontSize: 12, padding: "7px 12px", opacity: (loading || saveModal === "loading") ? 0.5 : 1 }}>
               <Icon d={Icons.building} size={12} />Uložit k firmě
             </button>
             <button onClick={clear} style={{ ...s.btn("ghost"), fontSize: 12 }}>Nová konverzace</button>
@@ -1570,6 +1585,7 @@ const AIAssistant = ({ session, data, ops }) => {
       </div>
 
       {savedBanner && <div style={{ background: `${C.success}12`, border: `1px solid ${C.success}30`, borderRadius: 8, padding: "9px 14px", fontSize: 13, color: C.success, fontWeight: 600, marginBottom: 10 }}>{savedBanner}</div>}
+      {memoryError && <div style={{ background: `${C.warning}12`, border: `1px solid ${C.warning}30`, borderRadius: 8, padding: "9px 14px", fontSize: 13, color: C.warning, marginBottom: 10 }}>💡 {memoryError}</div>}
 
       <div ref={scrollRef} style={{ flex: 1, overflowY: "auto", padding: "12px 4px", background: C.bg, borderRadius: 12, border: `1px solid ${C.border}`, marginBottom: 12 }}>
         {messages.length === 0 && !loading && (
@@ -1618,6 +1634,87 @@ const AIAssistant = ({ session, data, ops }) => {
         </button>
       </div>
 
+      {/* MODAL: Loading memory suggestions */}
+      {memoryModal === "loading" && (
+        <Modal title="Analyzuji konverzaci…" onClose={() => setMemoryModal(null)}>
+          <div style={{ textAlign: "center", padding: "30px 0" }}>
+            <div style={{ width: 34, height: 34, border: `3px solid ${C.border}`, borderTopColor: C.accent, borderRadius: "50%", animation: "spin 0.8s linear infinite", margin: "0 auto 14px" }} />
+            <div style={{ color: C.textMuted, fontSize: 13 }}>Asistent hledá co si zapamatovat…</div>
+          </div>
+        </Modal>
+      )}
+
+      {/* MODAL: Memory suggestions */}
+      {memoryModal && memoryModal !== "loading" && (
+        <Modal
+          title="Co si mám zapamatovat?"
+          onClose={() => setMemoryModal(null)}
+          onSave={saveSelectedMemories}
+          saveLabel={`Uložit (${memoryModal.memories.filter(m => m.selected).length})`}
+          saveDisabled={memoryModal.memories.filter(m => m.selected).length === 0}
+        >
+          <div style={{ fontSize: 12, color: C.textMuted, marginBottom: 14, lineHeight: 1.5 }}>
+            Asistent našel {memoryModal.memories.length} {memoryModal.memories.length === 1 ? 'poznatek' : memoryModal.memories.length < 5 ? 'poznatky' : 'poznatků'} k zapamatování. 
+            Zkontroluj, uprav a vyber co chceš uložit.
+          </div>
+
+          {memoryModal.memories.map((mem, idx) => (
+            <div key={idx} style={{ 
+              background: mem.selected ? C.accentLight : C.bg, 
+              border: `1.5px solid ${mem.selected ? C.accent : C.border}`, 
+              borderRadius: 10, 
+              padding: "12px 14px", 
+              marginBottom: 12,
+              transition: "all 0.15s"
+            }}>
+              <div style={{ display: "flex", alignItems: "flex-start", gap: 10, marginBottom: 8 }}>
+                <input 
+                  type="checkbox" 
+                  checked={mem.selected} 
+                  onChange={() => toggleMemory(idx)}
+                  style={{ marginTop: 2, cursor: "pointer", width: 16, height: 16 }}
+                />
+                <div style={{ flex: 1 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 6 }}>
+                    <span style={{ ...s.badge(memoryTypeColors[mem.type] || C.textDim), fontSize: 10 }}>
+                      {memoryTypeLabels[mem.type] || mem.type}
+                    </span>
+                    <span style={{ fontSize: 11, color: C.textDim }}>
+                      Důležitost: {mem.importance}/10
+                    </span>
+                  </div>
+                  <textarea
+                    value={mem.content}
+                    onChange={e => updateMemory(idx, "content", e.target.value)}
+                    disabled={!mem.selected}
+                    style={{ 
+                      ...inp, 
+                      minHeight: 50, 
+                      resize: "vertical", 
+                      fontSize: 13, 
+                      opacity: mem.selected ? 1 : 0.6,
+                      background: mem.selected ? C.white : C.bg
+                    }}
+                  />
+                  {mem.reasoning && (
+                    <div style={{ fontSize: 11, color: C.textDim, marginTop: 5, fontStyle: "italic" }}>
+                      💡 {mem.reasoning}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          ))}
+
+          {memoryError && (
+            <div style={{ background: `${C.danger}10`, border: `1px solid ${C.danger}30`, borderRadius: 8, padding: "8px 12px", fontSize: 12, color: C.danger, marginTop: 12 }}>
+              ⚠ {memoryError}
+            </div>
+          )}
+        </Modal>
+      )}
+
+      {/* MODAL: Loading save summary */}
       {saveModal === "loading" && (
         <Modal title="Připravuji shrnutí…" onClose={() => setSaveModal(null)}>
           <div style={{ textAlign: "center", padding: "30px 0" }}>
@@ -1627,6 +1724,7 @@ const AIAssistant = ({ session, data, ops }) => {
         </Modal>
       )}
 
+      {/* MODAL: Save to company */}
       {saveModal && saveModal !== "loading" && (
         <Modal
           title="Uložit shrnutí k firmě"
@@ -1681,7 +1779,6 @@ const AIAssistant = ({ session, data, ops }) => {
     </div>
   );
 };
-
 // --- MAIN APP ---
 const NAV = [
   { id: "dashboard", label: "Přehled", icon: Icons.chart },
