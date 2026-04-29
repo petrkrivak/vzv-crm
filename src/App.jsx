@@ -1580,7 +1580,6 @@ const AIAssistant = ({ session, data, ops }) => {
         await sb("ai_memory", {
           method: "POST",
           body: JSON.stringify({
-            id: uid(),
             user_id: session.user.id,
             memory_type: mem.type,
             entity_id: mem.entity_id || null,
